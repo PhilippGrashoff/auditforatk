@@ -6,15 +6,13 @@ namespace auditforatk;
 
 use atk4\data\Reference;
 use atk4\data\Reference\HasOne;
-use DateTime;
-use PMRAtk\Data\Audit;
-use PMRAtk\Data\BaseModel;
+use atk4\ui\Dropdown;
 use secondarymodelforatk\SecondaryModel;
 use ReflectionClass;
 use atk4\data\Model;
 
 
-trait AuditTrait
+trait ModelWithAuditTrait
 {
 
     /**
@@ -23,13 +21,11 @@ trait AuditTrait
     protected function addAuditRefAndAuditHooks(): Reference
     {
         $ref = $this->hasMany(
-            'Audit',
+            Audit::class,
             [
                 function () {
-                    return (new Audit($this->persistence, ['parentObject' => $this]))->addCondition(
-                        'model_class',
-                        get_class($this)
-                    );
+                    return (new Audit($this->persistence, ['parentObject' => $this]))
+                        ->addCondition('model_class', get_class($this));
                 },
                 'their_field' => 'model_id'
             ]
@@ -59,72 +55,26 @@ trait AuditTrait
      * to add a more complex Audit model (e.g. Coupons and AccountingItems)
      * TODO: Rename, name is misleading
      */
-    public function getAuditViewModel()
+    public function getAuditViewModel(): Audit
     {
         return $this->ref('Audit');
     }
 
     /**
-     * Save any change in ModelFields to Audit
+     * Save any change in Model Fields to Audit
      */
-    public function createAudit(string $type)
+    public function createAudit(string $type): void
     {
-        //add possibility to skip auditing App-wide, e.g. to speed up tests
-        if (isset($this->app->createAudit)
-            && !$this->app->createAudit
-        ) {
+        if (!$this->_checkSkipAudit()) {
             return;
         }
 
         $data = [];
         //TODO: This will fail with atk 2.3 where dirty_after_save behaviour changed
-        foreach ($this->dirty as $field_name => $dirty_field) {
-            //only audit non system fields and fields that go to persistence
-            if (!$this->hasField($field_name)
-                || $this->getField($field_name)->system
-                || $this->getField($field_name)->never_persist) {
-                continue;
-            }
-            //check if any "real" value change happened
-            if ($dirty_field === $this->get($field_name)) {
-                continue;
-            }
-            //strings special treatment
-            //money due to GermanMoneyFormatFieldTrait
-            if (
-                in_array($this->getField($field_name)->type, ['string', 'text', 'money'])
-                && $dirty_field == $this->get($field_name)
-            ) {
-                continue;
-            }
-
-            //time fields
-            if ($this->getField($field_name)->type === 'time') {
-                $data[$field_name] = $this->_timeFieldAudit($field_name, $dirty_field);
-            } //date fields
-            elseif ($this->getField($field_name)->type === 'date') {
-                $data[$field_name] = $this->_dateFieldAudit($field_name, $dirty_field);
-            } //hasOne relationship
-            elseif (
-                $this->hasRef($field_name)
-                && $this->getRef($field_name) instanceof HasOne
-            ) {
-                $old = $this->ref($field_name)->newInstance();
-                $old->tryLoad($dirty_field);
-                $new = $this->ref($field_name)->newInstance();
-                $new->tryLoad($this->get($field_name));
-                $data[$field_name] = $this->_hasOneAudit($field_name, $dirty_field, $new, $old);
-            } //dropdowns
-            elseif (
-                isset($this->getField($field_name)->ui['form'])
-                && in_array('DropDown', $this->getField($field_name)->ui['form'])
-            ) {
-                $data[$field_name] = $this->_dropDownAudit($field_name, $dirty_field);
-            } //any other field
-            else {
-                $data[$field_name] = $this->_normalFieldAudit($field_name, $dirty_field);
-            }
+        foreach ($this->dirty as $fieldName => $dirtyValue) {
+            $this->_addFieldToAudit($data, $fieldName, $dirtyValue);
         }
+
         if ($type == 'CREATE' || $data) {
             $audit = new Audit($this->persistence, ['parentObject' => $this]);
             $audit->reload_after_save = false;
@@ -134,12 +84,61 @@ trait AuditTrait
         }
     }
 
-    /**
-     * save delete to Audit
-     */
-    public function createDeleteAudit()
+    protected function _addFieldToAudit(array &$data, string $fieldName, $dirtyValue): void
     {
-        if (!$this->app->createAudit) {
+        //only audit non system fields and fields that go to persistence
+        if (
+            !$this->hasField($fieldName)
+            || $fieldName === $this->id_field
+            || $this->getField($fieldName)->never_persist
+        ) {
+            return;
+        }
+        //check if any "real" value change happened
+        if ($dirtyValue === $this->get($fieldName)) {
+            return;
+        }
+        //strings special treatment; money due to GermanMoneyFormatFieldTrait
+        if (
+            in_array($this->getField($fieldName)->type, ['string', 'text', 'money'])
+            && $dirtyValue == $this->get($fieldName)
+        ) {
+            return;
+        }
+
+        //time fields
+        if ($this->getField($fieldName)->type === 'time') {
+            $data[$fieldName] = $this->_timeFieldAudit($fieldName, $dirtyValue);
+        } //date fields
+        elseif ($this->getField($fieldName)->type === 'date') {
+            $data[$fieldName] = $this->_dateFieldAudit($fieldName, $dirtyValue);
+        } //hasOne relationship
+        elseif (
+            $this->hasRef($fieldName)
+            && $this->getRef($fieldName) instanceof HasOne
+        ) {
+            $data[$fieldName] = $this->_hasOneAudit($fieldName, $dirtyValue);
+        } //dropdowns
+        elseif (
+            (
+                is_array($this->getField($fieldName)->values)
+                && count($this->getField($fieldName)) > 0
+            )
+            || (
+                isset($this->getField($fieldName)->ui['form'])
+                && in_array(Dropdown::class, $this->getField($fieldName)->ui['form'])
+            )
+        ) {
+            $data[$fieldName] = $this->_dropDownAudit($fieldName, $dirtyValue);
+        } //any other field
+        else {
+            $data[$fieldName] = $this->_normalFieldAudit($fieldName, $dirtyValue);
+        }
+    }
+
+    public function createDeleteAudit(): void
+    {
+        if (!$this->_checkSkipAudit()) {
             return;
         }
         $audit = new Audit($this->persistence, ['parentObject' => $this]);
@@ -157,8 +156,8 @@ trait AuditTrait
         string $field = 'value',
         string $modelClass = null,
         $modelId = null
-    ) {
-        if (!$this->app->createAudit) {
+    ): void {
+        if (!$this->_checkSkipAudit()) {
             return;
         }
 
@@ -238,8 +237,8 @@ trait AuditTrait
     {
         return [
             'field_name' => $this->getField($field_name)->getCaption(),
-            'old_value' => ($dirty_field instanceof DateTime) ? date_format($dirty_field, 'd.m.Y') : '',
-            'new_value' => ($this->get($field_name) instanceof DateTime) ? date_format(
+            'old_value' => ($dirty_field instanceof \DateTime) ? date_format($dirty_field, 'd.m.Y') : '',
+            'new_value' => ($this->get($field_name) instanceof \DateTime) ? date_format(
                 $this->get($field_name),
                 'd.m.Y'
             ) : '',
@@ -254,8 +253,8 @@ trait AuditTrait
     {
         return [
             'field_name' => $this->getField($field_name)->getCaption(),
-            'old_value' => ($dirty_field instanceof DateTime) ? date_format($dirty_field, 'H:i') : '',
-            'new_value' => ($this->get($field_name) instanceof DateTime) ?
+            'old_value' => ($dirty_field instanceof \DateTime) ? date_format($dirty_field, 'H:i') : '',
+            'new_value' => ($this->get($field_name) instanceof \DateTime) ?
                 date_format($this->get($field_name), 'H:i') : '',
         ];
     }
@@ -264,27 +263,32 @@ trait AuditTrait
     /**
      * used to create a array containing the audit data for a one to many relation field
      */
-    private function _hasOneAudit($field_name, $dirty_field, $o_new, $o_old): array
+    private function _hasOneAudit(string $fieldName, $dirtyValue): array
     {
+        $old = $this->ref($fieldName)->newInstance();
+        $old->tryLoad($dirtyValue);
+        $new = $this->ref($fieldName)->newInstance();
+        $new->tryLoad($this->get($fieldName));
+
         //both objects loaded, means field had a value before and now
-        if ($o_new->loaded() && $o_old->loaded()) {
+        if ($old->loaded() && $new->loaded()) {
             return [
-                'field_name' => $this->getField($field_name)->getCaption(),
-                'old_value' => $o_old->get('name'),
-                'new_value' => $o_new->get('name'),
+                'field_name' => $this->getField($fieldName)->getCaption(),
+                'old_value' => $old->get('name'),
+                'new_value' => $new->get('name'),
             ];
         } //only new object loaded, means field didnt have a value before
-        elseif ($o_new->loaded()) {
+        elseif ($new->loaded()) {
             return [
-                'field_name' => $this->getField($field_name)->getCaption(),
-                'old_value' => $dirty_field,
-                'new_value' => $o_new->get('name'),
+                'field_name' => $this->getField($fieldName)->getCaption(),
+                'old_value' => $dirtyValue,
+                'new_value' => $new->get('name'),
             ];
         } else {
             return [
-                'field_name' => $this->getField($field_name)->getCaption(),
-                'old_value' => $dirty_field,
-                'new_value' => $this->get($field_name),
+                'field_name' => $this->getField($fieldName)->getCaption(),
+                'old_value' => $dirtyValue,
+                'new_value' => $this->get($fieldName),
             ];
         }
     }
@@ -293,28 +297,42 @@ trait AuditTrait
     /**
      *
      */
-    private function _dropDownAudit(string $field_name, $dirty_field): array
+    private function _dropDownAudit(string $fieldName, $dirtyValue): array
     {
         $old_value = $new_value = '...';
-        if (isset($this->getField($field_name)->values[$dirty_field])) {
-            $old_value = $this->getField($field_name)->values[$dirty_field];
-        } elseif (isset($this->getField($field_name)->ui['form']['values'][$dirty_field])) {
-            $old_value = $this->getField($field_name)->ui['form']['values'][$dirty_field];
-        } elseif (isset($this->getField($field_name)->ui['form']['empty'])) {
-            $old_value = $this->getField($field_name)->ui['form']['empty'];
+        if (isset($this->getField($fieldName)->values[$dirtyValue])) {
+            $old_value = $this->getField($fieldName)->values[$dirtyValue];
+        } elseif (isset($this->getField($fieldName)->ui['form']['values'][$dirtyValue])) {
+            $old_value = $this->getField($fieldName)->ui['form']['values'][$dirtyValue];
+        } elseif (isset($this->getField($fieldName)->ui['form']['empty'])) {
+            $old_value = $this->getField($fieldName)->ui['form']['empty'];
         }
 
-        if (isset($this->getField($field_name)->values[$this->get($field_name)])) {
-            $new_value = $this->getField($field_name)->values[$this->get($field_name)];
-        } elseif (isset($this->getField($field_name)->ui['form']['values'][$this->get($field_name)])) {
-            $new_value = $this->getField($field_name)->ui['form']['values'][$this->get($field_name)];
-        } elseif (isset($this->getField($field_name)->ui['form']['empty'])) {
-            $new_value = $this->getField($field_name)->ui['form']['empty'];
+        if (isset($this->getField($fieldName)->values[$this->get($fieldName)])) {
+            $new_value = $this->getField($fieldName)->values[$this->get($fieldName)];
+        } elseif (isset($this->getField($fieldName)->ui['form']['values'][$this->get($fieldName)])) {
+            $new_value = $this->getField($fieldName)->ui['form']['values'][$this->get($fieldName)];
+        } elseif (isset($this->getField($fieldName)->ui['form']['empty'])) {
+            $new_value = $this->getField($fieldName)->ui['form']['empty'];
         }
+
         return [
-            'field_name' => $this->getField($field_name)->getCaption(),
+            'field_name' => $this->getField($fieldName)->getCaption(),
             'old_value' => $old_value,
             'new_value' => $new_value,
         ];
+    }
+
+    protected function _checkSkipAudit(): bool
+    {
+        //add possibility to skip auditing App-wide, e.g. to speed up tests
+        if (
+            isset($this->app->createAudit)
+            && !$this->app->createAudit
+        ) {
+            return false;
+        }
+
+        return true;
     }
 }

@@ -2,17 +2,45 @@
 
 namespace auditforatk\tests;
 
-use PMRAtk\Data\Audit;
-use PMRAtk\tests\phpunit\TestCase;
+use atk4\data\Persistence;
+use atk4\schema\Migration;
+use auditforatk\Audit;
+use atk4\core\AtkPhpunit\TestCase;
+use auditforatk\tests\testclasses\AppWithAuditSetting;
+use auditforatk\tests\testclasses\PersistenceWithApp;
+use auditforatk\tests\testclasses\User;
+
 
 class AuditTest extends TestCase {
 
-    /**
-     * see if created_by and created_by_name are set on save
-     */
+    public function testNothing() {
+
+    }
+
     public function testUserInfoOnSave() {
-        $audit = new Audit(self::$app->db);
+        $persistence = $this->getPersistence();
+        $audit = new Audit($persistence);
+        $audit->app = $persistence->app;
         $audit->save();
-        self::assertEquals($audit->get('created_by_name'), self::$app->auth->user->get('name'));
+        self::assertEquals(
+            $audit->get('created_by_name'),
+            'SOME NAME'
+        );
+    }
+
+    protected function getPersistence(): Persistence {
+        $persistence = PersistenceWithApp::connect('sqlite::memory:');
+        $model1 = new Audit($persistence);
+        Migration::of($model1)->drop()->create();
+        $user = new User($persistence);
+        Migration::of($user)->drop()->create();
+
+        $persistence->app = new AppWithAuditSetting();
+        $persistence->app->auth = new \stdClass();
+        $persistence->app->auth->user = new User($persistence);
+        $persistence->app->auth->user->set('name', 'SOME NAME');
+        $persistence->app->auth->user->save();
+
+        return $persistence;
     }
 }

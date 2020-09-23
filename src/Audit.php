@@ -15,6 +15,11 @@ class Audit extends SecondaryModel {
 
     public $table = 'audit';
 
+    public $auditMessageRenderer = null;
+
+    //no need to reload audit records
+    public $reload_after_save = false;
+
 
     public function init(): void {
         parent::init();
@@ -48,14 +53,21 @@ class Audit extends SecondaryModel {
         $this->onHook(
             Model::HOOK_BEFORE_SAVE,
             function(Model $model, $isUpdate) {
-                if($isUpdate) {
-                    return;
-                }
                 if(
                     isset($model->app->auth->user)
                     && $model->app->auth->user->loaded()
                 ) {
                     $model->set('created_by_name', $model->app->auth->user->get('name'));
+                }
+            }
+        );
+
+        // add possibility to add custom renderer which makes nice messages
+        $this->onHook(
+            Model::HOOK_BEFORE_SAVE,
+            function(Model $model, $isUpdate) {
+                if($this->auditMessageRenderer) {
+                    $model->set('message', $this->auditMessageRenderer->renderMessage($this));
                 }
             }
         );

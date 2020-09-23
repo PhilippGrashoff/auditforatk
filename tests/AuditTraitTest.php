@@ -2,11 +2,9 @@
 
 namespace auditforatk\tests;
 
-use PMRAtk\Data\Audit;
-use PMRAtk\Data\Email;
-use PMRAtk\tests\TestClasses\BaseModelClasses\BaseModelA;
-use PMRAtk\tests\TestClasses\BaseModelClasses\BaseModelB;
-use PMRAtk\tests\phpunit\TestCase;
+use auditforatk\Audit;
+use auditforatk\tests\testclasses\ModelWithAudit;
+use atk4\core\AtkPhpunit\TestCase;
 
 
 class AuditTraitTest extends TestCase
