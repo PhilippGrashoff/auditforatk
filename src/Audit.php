@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace auditforatk;
 
 use atk4\data\Model;
+use atkmodelwithapp\AtkModelWithAppTrait;
 use secondarymodelforatk\SecondaryModel;
 use traitsforatkdata\CreatedDateAndLastUpdatedTrait;
 
@@ -12,10 +13,12 @@ use traitsforatkdata\CreatedDateAndLastUpdatedTrait;
 class Audit extends SecondaryModel {
 
     use CreatedDateAndLastUpdatedTrait;
+    use AtkModelWithAppTrait;
+
 
     public $table = 'audit';
 
-    public $auditMessageRenderer = null;
+    public $auditRenderer = null;
 
     //no need to reload audit records
     public $reload_after_save = false;
@@ -66,8 +69,8 @@ class Audit extends SecondaryModel {
         $this->onHook(
             Model::HOOK_BEFORE_SAVE,
             function(Model $model, $isUpdate) {
-                if($this->auditMessageRenderer) {
-                    $model->set('message', $this->auditMessageRenderer->renderMessage($this));
+                if($this->auditRenderer instanceof AuditRendererInterface) {
+                    $model->set('rendered_output', $this->auditRenderer->renderMessage($this));
                 }
             }
         );

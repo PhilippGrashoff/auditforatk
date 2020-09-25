@@ -2,209 +2,461 @@
 
 namespace auditforatk\tests;
 
+use atk4\data\Persistence;
+use atk4\ui\UserAction\ModalExecutor;
 use auditforatk\Audit;
+use auditforatk\tests\testclasses\AppWithAuditSetting;
+use auditforatk\tests\testclasses\Email;
 use auditforatk\tests\testclasses\ModelWithAudit;
-use atk4\core\AtkPhpunit\TestCase;
+use auditforatk\tests\testclasses\PersistenceWithApp;
+use auditforatk\tests\testclasses\User;
 
 
 class AuditTraitTest extends TestCase
 {
+    protected $sqlitePersistenceModels = [
+        Audit::class,
+        ModelWithAudit::class,
+        User::class
+    ];
 
-    public static function setUpBeforeClass(): void
-    {
-        parent::setUpBeforeClass();
-        self::$app->createAudit = true;
+    public function testSettingInAppDisablesAudit() {
+        $persistence = $this->getSqliteTestPersistence([Email::class]);
+        $persistence->app = new AppWithAuditSetting();
+        $persistence->app->createAudit = false;
+        $model = new ModelWithAudit($persistence);
+        $model->set('name', 'Lala');
+        $model->save();
+
+        $user = new User($persistence);
+        $user->save();
+        $model->addMToMAudit('ADD', $user);
+
+        $email = new Email($persistence);
+        $email->save();
+        $model->addSecondaryAudit('ADD', $email);
+
+        $model->addAdditionalAudit('SOMETYPE', []);
+
+        $audit = $model->ref(Audit::class);
+
+        self::assertEquals(
+            0,
+            $audit->action('count')->getOne()
+        );
+
+        $model->delete();
+
+        self::assertEquals(
+            0,
+            $audit->action('count')->getOne()
+        );
     }
 
-    public static function tearDownAfterClass(): void
-    {
-        parent::tearDownAfterClass();
-        self::$app->createAudit = false;
+    public function testGetAuditViewModel() {
+        $model = new ModelWithAudit($this->getSqliteTestPersistence());
+        self::assertInstanceOf(
+            Audit::class,
+            $model->getAuditViewModel()
+        );
     }
 
-    public function testAuditCreatedForFields()
-    {
-        $a = new BaseModelA(self::$app->db);
-        $a->save();
-        self::assertEquals(1, $a->getAuditViewModel()->action('count')->getOne());
-        $a->set('name', 'TEST');
-        $a->save();
-        self::assertEquals(2, $a->getAuditViewModel()->action('count')->getOne());
-        $a->set('dd_test', 1);
-        $a->save();
-        self::assertEquals(3, $a->getAuditViewModel()->action('count')->getOne());
-        $a->set('time', '10:00');
-        $a->set('date', '2019-05-05');
-        $a->set('dd_test', 2);
-        $a->set('dd_test_2', 'bla');
-        $a->save();
-        self::assertEquals(4, $a->getAuditViewModel()->action('count')->getOne());
-        $a->addAdditionalAudit('SOMETYPE', []);
-        self::assertEquals(5, $a->getAuditViewModel()->action('count')->getOne());
+    public function testNoAuditCreatedOnNoChange() {
+        $persistence = $this->getSqliteTestPersistence();
+        $model = new ModelWithAudit($persistence);
 
-        //hasOne Audit field all possibilities
-        $b1 = new BaseModelB(self::$app->db);
-        $b2 = new BaseModelB(self::$app->db);
-        $b1->save();
-        $b2->save();
+        //should create
+        $model->set('name', 'Lala');
+        $model->save();
+        self::assertEquals(
+            1,
+            $model->ref(Audit::class)->action('count')->getOne()
+        );
+        //change Id field. that should trigger save, but no audit created as this field is ignored
+        $model->set('id', '333');
+        $model->save();
+        self::assertEquals(
+            0, //0 here as Id changed so initial audit has no parent
+            $model->ref(Audit::class)->action('count')->getOne()
+        );
+    }
 
-        $a->set('BaseModelB_id', '1111');
-        $a->save();
-        $a->set('BaseModelB_id', $b1->get('id'));
-        $a->save();
-        $a->set('BaseModelB_id', $b2->get('id'));
-        $a->save();
+    public function testIdFieldIsIgnored() {
+        $model = new ModelWithAudit($this->getSqliteTestPersistence());
+        $data = [];
+        $this->callProtected($model, '_addFieldToAudit', $data, 'id', '235');
+        self::assertSame(
+            [],
+            $data
+        );
+    }
 
+    public function testFieldValueIdenticalNoAudit() {
+        $model = new ModelWithAudit($this->getSqliteTestPersistence());
+        $model->set('name', 'Dede');
+        $data = [];
+        $this->callProtected($model, '_addFieldToAudit', $data, 'name', 'Dede');
+        self::assertSame(
+            [],
+            $data
+        );
+    }
 
-        //make sure CREATE AND CHANGE Audits are there
-        $change_found = false;
-        $create_found = false;
-        foreach ($a->getAuditViewModel() as $audit) {
-            if ($audit->get('value') == 'CREATE') {
-                $create_found = true;
-            }
-            if ($audit->get('value') == 'CHANGE') {
-                $change_found = true;
-            }
+    public function testStringsLooselyComparedNoAudit() {
+        $model = new ModelWithAudit($this->getSqliteTestPersistence());
+        $model->set('name', null);
+        $data = [];
+        //as strings are compared using ==, null should equal ''
+        $this->callProtected($model, '_addFieldToAudit', $data, 'name', '');
+        self::assertSame(
+            [],
+            $data
+        );
+    }
+
+    public function testSeveralFieldChangesCreateOneAuditEntry() {
+        $model = new ModelWithAudit($this->getSqliteTestPersistence());
+        $model->set('name', 'Lala');
+        $model->set('other_field', 'Gaga');
+        $model->save();
+
+        self::assertEquals(
+            1,
+            $model->ref(Audit::class)->action('count')->getOne()
+        );
+
+        self::assertCount(
+            2,
+            $model->ref(Audit::class)->loadAny()->get('data')
+        );
+    }
+
+    public function testAuditRemainsAfterDeletingModel() {
+        $persistence = $this->getSqliteTestPersistence();
+        $model = new ModelWithAudit($persistence);
+        $model->set('name', 'Lala');
+        $model->set('other_field', 'Gaga');
+        $model->save();
+
+        self::assertEquals(
+            1,
+            $model->ref(Audit::class)->action('count')->getOne()
+        );
+
+        $model->delete();
+
+        $auditForModel = new Audit($persistence);
+        $auditForModel->set('model_id', $model->get('id'));
+        $auditForModel->set('model_class', ModelWithAudit::class);
+
+        self::assertEquals(
+            2,
+            $auditForModel->action('count')->getOne()
+        );
+    }
+
+    public function testCreateChangeAndDeleteAuditIsAdded() {
+        $persistence = $this->getSqliteTestPersistence();
+        $model = new ModelWithAudit($persistence);
+        $model->set('name', 'Lala');
+        $model->set('other_field', 'Gaga');
+        $model->save();
+        $model->set('name', 'Baba');
+        $model->save();
+        $model->delete();
+
+        $auditForModel = new Audit($persistence);
+        $auditForModel->set('model_id', $model->get('id'));
+        $auditForModel->set('model_class', ModelWithAudit::class);
+
+        self::assertEquals(
+            3,
+            $auditForModel->action('count')->getOne()
+        );
+
+        $check = ['CREATE', 'CHANGE', 'DELETE'];
+
+        foreach ($check as $valueName) {
+            $checkAudit = clone $auditForModel;
+            $checkAudit->addCondition('value', $valueName);
+            $checkAudit->loadAny();
+
+            self::assertEquals(
+                1,
+                $checkAudit->action('count')->getOne()
+            );
         }
-        self::assertTrue($change_found);
-        self::assertTrue($create_found);
-    }
-
-    public function testDeleteAudit()
-    {
-        $a = new BaseModelA(self::$app->db);
-        $a->save();
-        $initial_audit_count = (new Audit(self::$app->db))->action('count')->getOne();
-        $a->delete();
-        self::assertEquals($initial_audit_count + 1, (new Audit(self::$app->db))->action('count')->getOne());
-
-        //make sure newest audit is of type delete
-        $a = new Audit(self::$app->db);
-        $a->setOrder('id DESC');
-        $a->setLimit(0, 1);
-        $a->loadAny();
-        self::assertEquals('DELETE', $a->get('value'));
-    }
-
-    public function testNoAuditCreatedOnSetting()
-    {
-        self::$app->createAudit = false;
-        $initial_audit_count = (new Audit(self::$app->db))->action('count')->getOne();
-
-        $a = new BaseModelA(self::$app->db);
-        $a->save();
-        $a->addAdditionalAudit('bla', []);
-
-        self::assertEquals($initial_audit_count, (new Audit(self::$app->db))->action('count')->getOne());
-        self::$app->createAudit = true;
     }
 
     public function testMToMAudit()
     {
-        $a = new BaseModelA(self::$app->db);
-        $a->save();
-        $initial_audit_count = (new Audit(self::$app->db))->action('count')->getOne();
-        $a->addMToMAudit('ADD', new BaseModelB(self::$app->db));
-        self::assertEquals($initial_audit_count + 1, (new Audit(self::$app->db))->action('count')->getOne());
-    }
+        $persistence = $this->getSqliteTestPersistence();
+        $model = new ModelWithAudit($persistence);
+        $model->save();
+        $user = new User($persistence);
+        $model->addMToMAudit('ADD', $user);
 
-    public function testNoAuditOnNoValueChange()
-    {
-        $a = new BaseModelA(self::$app->db);
-        $a->set('name', 'TEST');
-        $a->set('dd_test', 1);
-        $a->save();
-        $a->set('name', 'TEST');
-        $a->set('dd_test', 2);
-        $a->save();
-
-        $i = 0;
-        foreach ($a->ref('Audit') as $audit) {
-            $i++;
-            //first audit should carry name change
-            if ($i === 1) {
-                self::assertTrue(isset($audit->get('data')['name']));
-            } //second shouldnt
-            elseif ($i === 2) {
-                self::assertFalse(isset($audit->get('data')['name']));
-            }
-        }
-
-        //make sure it was 2
-        self::assertEquals(2, $i);
-    }
-
-    public function testNoAuditOnNoValueChangeStringsLooseCompare()
-    {
-        $a = new BaseModelA(self::$app->db);
-        $a->set('name', '');
-        $a->set('dd_test', 1);
-        $a->save();
-        $a->set('name', null);
-        $a->set('dd_test', 2);
-        $a->save();
-
-        $i = 0;
-        foreach ($a->ref('Audit') as $audit) {
-            $i++;
-            self::assertFalse(isset($audit->get('data')['name']));
-
-        }
-
-        //make sure it was 2
-        self::assertEquals(2, $i);
-    }
-
-    public function testContinueIfDirtyValueEqualsNewValue() {
-        $a = new BaseModelA(self::$app->db);
-        $a->set('dd_test', 1);
-        $a->dirty = ['dd_test' => 1];
-        $a->set('name', 'SomeName');
-        $a->save();
-        self::assertEquals(1, $a->ref('Audit')->action('count')->getOne());
-        $au = $a->ref('Audit')->loadAny();
-        $data = $au->get('data');
-        self::assertFalse(isset($data['dd_test']));
-    }
-
-    public function testFieldsValuePropertyIsCorrectlyAudited() {
-        $withValues = new class extends BaseModelA {
-
-            public function init(): void {
-                parent::init();
-                $this->getField('dd_test')->values = [0 => 'Nein', 1 => 'Ja'];
-            }
-        };
-
-        $instance = new $withValues(self::$app->db);
-        $instance->set('dd_test', 1);
-        $instance->save();
-        $instance->set('dd_test', 0);
-        $instance->save();
-        self::assertEquals(2, $instance->ref('Audit')->action('count')->getOne());
-        foreach ($instance->ref('Audit') as $au) {
-            $data = $au->get('data');
-            self::assertTrue(isset($data['dd_test']));
-        }
+        self::assertEquals(
+            2,
+            $model->ref(Audit::class)->action('count')->getOne()
+        );
     }
 
     public function testAddSecondaryAudit() {
-        $baseModelA = new BaseModelA(self::$app->db);
-        $baseModelA->save();
-        
-        $baseModelB = new BaseModelB(self::$app->db);
-        $baseModelB->save();
-        
-        $email = new Email(self::$app->db);
-        $email->set('value', 'SOMEEMAIL');
-        $email->save();
+        $persistence = $this->getSqliteTestPersistence([Email::class]);
+        $model = new ModelWithAudit($persistence);
+        $model->save();
+        $email = new Email($persistence);
+        $email->set('value', 'someEmail');
+        $model->addSecondaryAudit('ADD', $email);
 
-        //with 2 params, standard
-        $baseModelA->addSecondaryAudit('ADD', $email);
-        $baseModelA->addSecondaryAudit('CHANGE', $email, 'value', BaseModelB::class, $baseModelB->get('id'));
-
-        self::assertEquals(2, $baseModelA->ref('Audit')->action('count')->getOne());
-        self::assertEquals(2, $baseModelB->ref('Audit')->action('count')->getOne());
+        self::assertEquals(
+            2,
+            $model->ref(Audit::class)->action('count')->getOne()
+        );
     }
+
+    public function testAddSecondaryAuditWithDifferentModelClassAndId() {
+        $persistence = $this->getSqliteTestPersistence([Email::class]);
+        $model = new ModelWithAudit($persistence);
+        $model->save();
+
+        $email = new Email($persistence);
+        $email->set('value', 'someEmail');
+        $model->addSecondaryAudit('ADD', $email, 'value', 'SomeOtherClass', '444');
+
+        $audit = new Audit($persistence);
+        $audit->addCondition('model_class', 'SomeOtherClass');
+        $audit->addCondition('model_id', '444');
+        $audit->loadAny();
+        self::assertEquals(
+            'SomeOtherClass',
+            $audit->get('model_class')
+        );
+
+        self::assertEquals(
+            '444',
+            $audit->get('model_id')
+        );
+    }
+
+    public function testAddAdditionalAudit() {
+        $persistence = $this->getSqliteTestPersistence();
+        $model = new ModelWithAudit($persistence);
+        $model->save();
+        $model->addAdditionalAudit('SOME_TYPE', ['bagga' => 'wagga']);
+
+        self::assertEquals(
+            2,
+            $model->ref(Audit::class)->action('count')->getOne()
+        );
+    }
+
+    public function testTimeFieldAudit() {
+        $persistence = $this->getSqliteTestPersistence();
+        $model = new ModelWithAudit($persistence);
+        $model->set('time', '11:11');
+        $model->save();
+
+        $audit = $model->ref(Audit::class)->loadAny();
+        self::assertSame(
+            '11:11',
+            $audit->get('data')['time']['new_value']
+        );
+    }
+
+    public function testDateTimeFieldAudit() {
+        $persistence = $this->getSqliteTestPersistence();
+        $model = new ModelWithAudit($persistence);
+        $model->set('datetime', '2020-01-01T11:11:00+00:00');
+        $model->save();
+
+        $audit = $model->ref(Audit::class)->loadAny();
+        self::assertSame(
+            '01.01.2020 11:11',
+            $audit->get('data')['datetime']['new_value']
+        );
+    }
+
+    public function testDateFieldAudit() {
+        $persistence = $this->getSqliteTestPersistence();
+        $model = new ModelWithAudit($persistence);
+        $model->set('date', '2020-01-01T11:11:00+00:00');
+        $model->save();
+
+        $audit = $model->ref(Audit::class)->loadAny();
+        self::assertSame(
+            '01.01.2020',
+            $audit->get('data')['date']['new_value']
+        );
+    }
+
+    public function testHasOneAudit() {
+        $persistence = $this->getSqliteTestPersistence();
+        $model = new ModelWithAudit($persistence);
+
+        $user1 = new User($persistence);
+        $user1->set('name', 'Hans');
+        $user1->save();
+
+        $user2 = new User($persistence);
+        $user2->set('name', 'Peter');
+        $user2->save();
+
+        $model->set('user_id', $user1->get('id'));
+        $model->save();
+        $audit = $model->ref(Audit::class);
+        $audit->loadAny();
+        self::assertEquals(
+            [
+                'field_name' => 'Benutzer',
+                'old_value' => null,
+                'new_value' => 'Hans'
+            ],
+            $audit->get('data')['user_id']
+        );
+
+        $model->set('user_id', $user2->get('id'));
+        $model->save();
+        $audit->loadAny();
+        self::assertEquals(
+            [
+                'field_name' => 'Benutzer',
+                'old_value' => 'Hans',
+                'new_value' => 'Peter'
+            ],
+            $audit->get('data')['user_id']
+        );
+
+        $model->set('user_id', null);
+        $model->save();
+        $audit->loadAny();
+        self::assertEquals(
+            [
+                'field_name' => 'Benutzer',
+                'old_value' => 'Peter',
+                'new_value' => null
+            ],
+            $audit->get('data')['user_id']
+        );
+    }
+
+
+    public function testValuesFieldAudit() {
+        $persistence = $this->getSqliteTestPersistence();
+        $model = new ModelWithAudit($persistence);
+
+        $model->set('values', 0);
+        $model->save();
+        $audit = $model->ref(Audit::class);
+        $audit->loadAny();
+        self::assertEquals(
+            [
+                'field_name' => 'ValuesTest',
+                'old_value' => '',
+                'new_value' => 'SomeValue'
+            ],
+            $audit->get('data')['values']
+        );
+
+        $model->set('values', 1);
+        $model->save();
+        $audit = $model->ref(Audit::class);
+        $audit->loadAny();
+        self::assertEquals(
+            [
+                'field_name' => 'ValuesTest',
+                'old_value' => 'SomeValue',
+                'new_value' => 'SomeOtherValue'
+            ],
+            $audit->get('data')['values']
+        );
+
+        $model->set('values', null);
+        $model->save();
+        $audit = $model->ref(Audit::class);
+        $audit->loadAny();
+        self::assertEquals(
+            [
+                'field_name' => 'ValuesTest',
+                'old_value' => 'SomeOtherValue',
+                'new_value' => ''
+            ],
+            $audit->get('data')['values']
+        );
+    }
+
+
+
+    public function testDropDownFieldAudit() {
+        $persistence = $this->getSqliteTestPersistence();
+        $model = new ModelWithAudit($persistence);
+
+        $model->set('dropdown', 0);
+        $model->save();
+        $audit = $model->ref(Audit::class);
+        $audit->loadAny();
+        self::assertEquals(
+            [
+                'field_name' => 'DropDownTest',
+                'old_value' => '',
+                'new_value' => 'SomeValue'
+            ],
+            $audit->get('data')['dropdown']
+        );
+
+        $model->set('dropdown', 1);
+        $model->save();
+        $audit = $model->ref(Audit::class);
+        $audit->loadAny();
+        self::assertEquals(
+            [
+                'field_name' => 'DropDownTest',
+                'old_value' => 'SomeValue',
+                'new_value' => 'SomeOtherValue'
+            ],
+            $audit->get('data')['dropdown']
+        );
+
+        $model->set('dropdown', null);
+        $model->save();
+        $audit = $model->ref(Audit::class);
+        $audit->loadAny();
+        self::assertEquals(
+            [
+                'field_name' => 'DropDownTest',
+                'old_value' => 'SomeOtherValue',
+                'new_value' => ''
+            ],
+            $audit->get('data')['dropdown']
+        );
+
+        $model->set('dropdown', 'someNonExistantValue');
+        $model->save();
+        $audit = $model->ref(Audit::class);
+        $audit->loadAny();
+        self::assertEquals(
+            [
+                'field_name' => 'DropDownTest',
+                'old_value' => '',
+                'new_value' => ''
+            ],
+            $audit->get('data')['dropdown']
+        );
+
+        $model->set('dropdown', 'someOtherNonExistantValue');
+        $model->save();
+        $audit = $model->ref(Audit::class);
+        $audit->loadAny();
+        self::assertEquals(
+            [
+                'field_name' => 'DropDownTest',
+                'old_value' => '',
+                'new_value' => ''
+            ],
+            $audit->get('data')['dropdown']
+        );
+    }
+
+
 }

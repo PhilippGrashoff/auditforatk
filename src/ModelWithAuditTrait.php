@@ -16,7 +16,7 @@ trait ModelWithAuditTrait
 {
 
     /**
-     * use in Model::init()
+     * use in Model::init() to quickly set up reference and hooks
      */
     protected function addAuditRefAndAuditHooks(): Reference
     {
@@ -57,7 +57,7 @@ trait ModelWithAuditTrait
      */
     public function getAuditViewModel(): Audit
     {
-        return $this->ref('Audit');
+        return $this->ref(Audit::class);
     }
 
     /**
@@ -77,7 +77,6 @@ trait ModelWithAuditTrait
 
         if ($type == 'CREATE' || $data) {
             $audit = new Audit($this->persistence, ['parentObject' => $this]);
-            $audit->reload_after_save = false;
             $audit->set('value', $type);
             $audit->set('data', $data);
             $audit->save();
@@ -100,7 +99,7 @@ trait ModelWithAuditTrait
         }
         //strings special treatment; money due to GermanMoneyFormatFieldTrait
         if (
-            in_array($this->getField($fieldName)->type, ['string', 'text', 'money'])
+            in_array($this->getField($fieldName)->type, [null, 'string', 'text', 'money'])
             && $dirtyValue == $this->get($fieldName)
         ) {
             return;
@@ -112,6 +111,9 @@ trait ModelWithAuditTrait
         } //date fields
         elseif ($this->getField($fieldName)->type === 'date') {
             $data[$fieldName] = $this->_dateFieldAudit($fieldName, $dirtyValue);
+        } //datetime fields
+        elseif ($this->getField($fieldName)->type === 'datetime') {
+            $data[$fieldName] = $this->_dateTimeFieldAudit($fieldName, $dirtyValue);
         } //hasOne relationship
         elseif (
             $this->hasRef($fieldName)
@@ -122,7 +124,7 @@ trait ModelWithAuditTrait
         elseif (
             (
                 is_array($this->getField($fieldName)->values)
-                && count($this->getField($fieldName)) > 0
+                && count($this->getField($fieldName)->values) > 0
             )
             || (
                 isset($this->getField($fieldName)->ui['form'])
@@ -142,7 +144,6 @@ trait ModelWithAuditTrait
             return;
         }
         $audit = new Audit($this->persistence, ['parentObject' => $this]);
-        $audit->reload_after_save = false;
         $audit->set('value', 'DELETE');
         $audit->save();
     }
@@ -160,9 +161,9 @@ trait ModelWithAuditTrait
         if (!$this->_checkSkipAudit()) {
             return;
         }
-
         $audit = new Audit($this->persistence, ['parentObject' => $this]);
-        $audit->reload_after_save = false;
+        //TODO: Why shortname? store full, easier, cant lead to unintended errors
+        //In general, ADD_SECONDARY and storing the class name in data array is more sensible!
         $audit->set('value', $type . '_' . strtoupper((new ReflectionClass($model))->getShortName()));
         if ($modelClass && $modelId) {
             $audit->set('model_class', $modelClass);
@@ -186,17 +187,22 @@ trait ModelWithAuditTrait
     /**
      * creates an Audit for adding/removing MToM Relations
      */
-    public function addMToMAudit(string $type, BaseModel $model, $nameField = 'name')
+    public function addMToMAudit(string $type, Model $model, $fieldName = 'name'): void
     {
-        if (!$this->app->createAudit) {
+        if (!$this->_checkSkipAudit()) {
             return;
         }
 
         $audit = new Audit($this->persistence, ['parentObject' => $this]);
-        $audit->reload_after_save = false;
+        //TODO: Why shortname? store full, easier, cant lead to unintended errors
+        //In general, ADD_MTOM and storing the class name in data array is more sensible!
         $audit->set('value', $type . '_' . strtoupper((new ReflectionClass($model))->getShortName()));
 
-        $data = ['id' => $model->get('id'), 'name' => $model->get($nameField), 'model' => get_class($model)];
+        $data = [
+            'id' => $model->get($model->id_field),
+            'name' => $model->get($fieldName),
+            'model' => get_class($model)
+        ];
 
         $audit->set('data', $data);
         $audit->save();
@@ -207,11 +213,10 @@ trait ModelWithAuditTrait
      */
     public function addAdditionalAudit(string $type, array $data)
     {
-        if (!$this->app->createAudit) {
+        if (!$this->_checkSkipAudit()) {
             return;
         }
         $audit = new Audit($this->persistence, ['parentObject' => $this]);
-        $audit->reload_after_save = false;
         $audit->set('value', $type);
         $audit->set('data', $data);
         $audit->save();
@@ -220,86 +225,76 @@ trait ModelWithAuditTrait
     /**
      *  used to create a array containing the audit data for a normal field
      */
-    private function _normalFieldAudit($field_name, $dirty_field): array
+    private function _normalFieldAudit(string $fieldName, $dirtyValue): array
     {
         return [
-            'field_name' => $this->getField($field_name)->getCaption(),
-            'old_value' => $dirty_field,
-            'new_value' => $this->get($field_name),
+            'field_name' => $this->getField($fieldName)->getCaption(),
+            'old_value' => $dirtyValue,
+            'new_value' => $this->get($fieldName),
         ];
     }
 
 
     /**
-     *  used to create a array containing the audit data for a date field
+     * TODO: It seems more sensible to store serialized DateTime Object!
      */
-    private function _dateFieldAudit($field_name, $dirty_field): array
+    private function _dateFieldAudit(string $fieldName, $dirtyValue): array
     {
         return [
-            'field_name' => $this->getField($field_name)->getCaption(),
-            'old_value' => ($dirty_field instanceof \DateTime) ? date_format($dirty_field, 'd.m.Y') : '',
-            'new_value' => ($this->get($field_name) instanceof \DateTime) ? date_format(
-                $this->get($field_name),
+            'field_name' => $this->getField($fieldName)->getCaption(),
+            'old_value' => ($dirtyValue instanceof \DateTime) ? date_format($dirtyValue, 'd.m.Y') : '',
+            'new_value' => ($this->get($fieldName) instanceof \DateTime) ? date_format(
+                $this->get($fieldName),
                 'd.m.Y'
             ) : '',
         ];
     }
 
-
-    /**
-     *  used to create a array containing the audit data for a time field
-     */
-    private function _timeFieldAudit($field_name, $dirty_field): array
+    private function _dateTimeFieldAudit(string $fieldName, $dirtyValue): array
     {
         return [
-            'field_name' => $this->getField($field_name)->getCaption(),
-            'old_value' => ($dirty_field instanceof \DateTime) ? date_format($dirty_field, 'H:i') : '',
-            'new_value' => ($this->get($field_name) instanceof \DateTime) ?
-                date_format($this->get($field_name), 'H:i') : '',
+            'field_name' => $this->getField($fieldName)->getCaption(),
+            'old_value' => ($dirtyValue instanceof \DateTime) ? date_format($dirtyValue, 'd.m.Y H:i') : '',
+            'new_value' => ($this->get($fieldName) instanceof \DateTime) ? date_format(
+                $this->get($fieldName),
+                'd.m.Y H:i'
+            ) : '',
         ];
     }
 
+    private function _timeFieldAudit(string $fieldName, $dirtyValue): array
+    {
+        return [
+            'field_name' => $this->getField($fieldName)->getCaption(),
+            'old_value' => ($dirtyValue instanceof \DateTime) ? date_format($dirtyValue, 'H:i') : '',
+            'new_value' => ($this->get($fieldName) instanceof \DateTime) ?
+                date_format($this->get($fieldName), 'H:i') : '',
+        ];
+    }
 
     /**
      * used to create a array containing the audit data for a one to many relation field
      */
-    private function _hasOneAudit(string $fieldName, $dirtyValue): array
+    private function _hasOneAudit(string $fieldName, $dirtyValue, string $titleField = 'name'): array
     {
         $old = $this->ref($fieldName)->newInstance();
         $old->tryLoad($dirtyValue);
         $new = $this->ref($fieldName)->newInstance();
         $new->tryLoad($this->get($fieldName));
 
-        //both objects loaded, means field had a value before and now
-        if ($old->loaded() && $new->loaded()) {
-            return [
-                'field_name' => $this->getField($fieldName)->getCaption(),
-                'old_value' => $old->get('name'),
-                'new_value' => $new->get('name'),
-            ];
-        } //only new object loaded, means field didnt have a value before
-        elseif ($new->loaded()) {
-            return [
-                'field_name' => $this->getField($fieldName)->getCaption(),
-                'old_value' => $dirtyValue,
-                'new_value' => $new->get('name'),
-            ];
-        } else {
-            return [
-                'field_name' => $this->getField($fieldName)->getCaption(),
-                'old_value' => $dirtyValue,
-                'new_value' => $this->get($fieldName),
-            ];
-        }
+        $newValue = $new->loaded() ? $new->get($titleField) : $this->get($fieldName);
+        $oldValue = $old->loaded() ? $old->get($titleField) : $dirtyValue;
+
+        return [
+            'field_name' => $this->getField($fieldName)->getCaption(),
+            'old_value' => $oldValue,
+            'new_value' => $newValue,
+        ];
     }
 
-
-    /**
-     *
-     */
     private function _dropDownAudit(string $fieldName, $dirtyValue): array
     {
-        $old_value = $new_value = '...';
+        $old_value = $new_value = '';
         if (isset($this->getField($fieldName)->values[$dirtyValue])) {
             $old_value = $this->getField($fieldName)->values[$dirtyValue];
         } elseif (isset($this->getField($fieldName)->ui['form']['values'][$dirtyValue])) {

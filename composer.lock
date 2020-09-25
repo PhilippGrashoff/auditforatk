@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#composer-lock-the-lock-file",
         "This file is @generated automatically"
     ],
-    "content-hash": "a764273557664406782412ef242898b9",
+    "content-hash": "b68a743efbed058a2e6d0618dde0d0de",
     "packages": [
         {
             "name": "atk4/core",
@@ -366,6 +366,32 @@
                 "widget"
             ],
             "time": "2020-07-15T22:16:50+00:00"
+        },
+        {
+            "name": "philippgrashoff/atkmodelwithapp",
+            "version": "dev-master",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/PhilippGrashoff/atkmodelwithapp.git",
+                "reference": "793ca3e62bca6f37e20335737e80479475978ce5"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/PhilippGrashoff/atkmodelwithapp/zipball/793ca3e62bca6f37e20335737e80479475978ce5",
+                "reference": "793ca3e62bca6f37e20335737e80479475978ce5",
+                "shasum": ""
+            },
+            "require-dev": {
+                "phpunit/phpunit": ">8"
+            },
+            "type": "library",
+            "autoload": {
+                "psr-4": {
+                    "atkmodelwithapp\\": "src"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "time": "2020-09-23T17:46:15+00:00"
         },
         {
             "name": "philippgrashoff/secondarymodelforatk",

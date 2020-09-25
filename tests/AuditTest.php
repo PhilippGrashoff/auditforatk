@@ -7,24 +7,29 @@ use atk4\schema\Migration;
 use auditforatk\Audit;
 use atk4\core\AtkPhpunit\TestCase;
 use auditforatk\tests\testclasses\AppWithAuditSetting;
+use auditforatk\tests\testclasses\AuditRendererDemo;
 use auditforatk\tests\testclasses\PersistenceWithApp;
 use auditforatk\tests\testclasses\User;
 
 
 class AuditTest extends TestCase {
 
-    public function testNothing() {
-
-    }
-
     public function testUserInfoOnSave() {
-        $persistence = $this->getPersistence();
-        $audit = new Audit($persistence);
-        $audit->app = $persistence->app;
+        $audit = new Audit($this->getPersistence());
         $audit->save();
         self::assertEquals(
             $audit->get('created_by_name'),
             'SOME NAME'
+        );
+    }
+
+    public function testAuditMessageRendererIsUsed() {
+        $audit = new Audit($this->getPersistence());
+        $audit->auditRenderer = new AuditRendererDemo();
+        $audit->save();
+        self::assertEquals(
+            $audit->get('rendered_output'),
+            'Demo'
         );
     }
 

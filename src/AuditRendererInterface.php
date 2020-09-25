@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace auditforatk;
 
 
-interface AuditMessageRendererInterface {
+interface AuditRendererInterface {
 
     public function renderMessage(Audit $audit): string;
 }

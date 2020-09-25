@@ -14,7 +14,8 @@
     "philippgrashoff/secondarymodelforatk": "master"
   },
   "require-dev": {
-    "phpunit/phpunit": ">8"
+    "phpunit/phpunit": ">8",
+    "atk4/ui": "2.2.0"
   },
   "autoload":{
     "psr-4":{
