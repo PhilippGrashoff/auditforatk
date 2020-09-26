@@ -6,14 +6,14 @@ namespace auditforatk\tests\testclasses;
 
 use atk4\data\Model;
 use atk4\ui\Dropdown;
-use atkmodelwithapp\AtkModelWithAppTrait;
 use auditforatk\ModelWithAuditTrait;
+use traitsforatkdata\ModelWithAppTrait;
 
 class ModelWithAudit extends Model
 {
 
     use ModelWithAuditTrait;
-    use AtkModelWithAppTrait;
+    use ModelWithAppTrait;
 
     public $table = 'model_with_audit';
 

@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace auditforatk;
 
 use atk4\data\Model;
-use atkmodelwithapp\AtkModelWithAppTrait;
+use traitsforatkdata\ModelWithAppTrait;
 use secondarymodelforatk\SecondaryModel;
 use traitsforatkdata\CreatedDateAndLastUpdatedTrait;
 
@@ -13,7 +13,7 @@ use traitsforatkdata\CreatedDateAndLastUpdatedTrait;
 class Audit extends SecondaryModel {
 
     use CreatedDateAndLastUpdatedTrait;
-    use AtkModelWithAppTrait;
+    use ModelWithAppTrait;
 
 
     public $table = 'audit';

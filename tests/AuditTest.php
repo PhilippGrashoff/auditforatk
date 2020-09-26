@@ -3,16 +3,19 @@
 namespace auditforatk\tests;
 
 use atk4\data\Persistence;
-use atk4\schema\Migration;
 use auditforatk\Audit;
-use atk4\core\AtkPhpunit\TestCase;
+use traitsforatkdata\TestCase;
 use auditforatk\tests\testclasses\AppWithAuditSetting;
 use auditforatk\tests\testclasses\AuditRendererDemo;
-use auditforatk\tests\testclasses\PersistenceWithApp;
 use auditforatk\tests\testclasses\User;
 
 
 class AuditTest extends TestCase {
+
+    protected $sqlitePersistenceModels = [
+        User::class,
+        Audit::class
+    ];
 
     public function testUserInfoOnSave() {
         $audit = new Audit($this->getPersistence());
@@ -34,11 +37,7 @@ class AuditTest extends TestCase {
     }
 
     protected function getPersistence(): Persistence {
-        $persistence = PersistenceWithApp::connect('sqlite::memory:');
-        $model1 = new Audit($persistence);
-        Migration::of($model1)->drop()->create();
-        $user = new User($persistence);
-        Migration::of($user)->drop()->create();
+        $persistence = $this->getSqliteTestPersistence();
 
         $persistence->app = new AppWithAuditSetting();
         $persistence->app->auth = new \stdClass();

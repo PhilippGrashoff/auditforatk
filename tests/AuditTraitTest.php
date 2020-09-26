@@ -2,14 +2,12 @@
 
 namespace auditforatk\tests;
 
-use atk4\data\Persistence;
-use atk4\ui\UserAction\ModalExecutor;
 use auditforatk\Audit;
 use auditforatk\tests\testclasses\AppWithAuditSetting;
 use auditforatk\tests\testclasses\Email;
 use auditforatk\tests\testclasses\ModelWithAudit;
-use auditforatk\tests\testclasses\PersistenceWithApp;
 use auditforatk\tests\testclasses\User;
+use traitsforatkdata\TestCase;
 
 
 class AuditTraitTest extends TestCase
