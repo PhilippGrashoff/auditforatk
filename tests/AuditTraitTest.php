@@ -18,7 +18,8 @@ class AuditTraitTest extends TestCase
         User::class
     ];
 
-    public function testSettingInAppDisablesAudit() {
+    public function testSettingInAppDisablesAudit()
+    {
         $persistence = $this->getSqliteTestPersistence([Email::class]);
         $persistence->app = new AppWithAuditSetting();
         $persistence->app->createAudit = false;
@@ -51,7 +52,8 @@ class AuditTraitTest extends TestCase
         );
     }
 
-    public function testGetAuditViewModel() {
+    public function testGetAuditViewModel()
+    {
         $model = new ModelWithAudit($this->getSqliteTestPersistence());
         self::assertInstanceOf(
             Audit::class,
@@ -59,7 +61,8 @@ class AuditTraitTest extends TestCase
         );
     }
 
-    public function testNoAuditCreatedOnNoChange() {
+    public function testNoAuditCreatedOnNoChange()
+    {
         $persistence = $this->getSqliteTestPersistence();
         $model = new ModelWithAudit($persistence);
 
@@ -70,16 +73,16 @@ class AuditTraitTest extends TestCase
             1,
             $model->ref(Audit::class)->action('count')->getOne()
         );
-        //change Id field. that should trigger save, but no audit created as this field is ignored
-        $model->set('id', '333');
+        $model->set('name', 'Lala');
         $model->save();
         self::assertEquals(
-            0, //0 here as Id changed so initial audit has no parent
+            1,
             $model->ref(Audit::class)->action('count')->getOne()
         );
     }
 
-    public function testIdFieldIsIgnored() {
+    public function testIdFieldIsIgnored()
+    {
         $model = new ModelWithAudit($this->getSqliteTestPersistence());
         $data = [];
         $this->callProtected($model, '_addFieldToAudit', $data, 'id', '235');
@@ -89,7 +92,8 @@ class AuditTraitTest extends TestCase
         );
     }
 
-    public function testFieldValueIdenticalNoAudit() {
+    public function testFieldValueIdenticalNoAudit()
+    {
         $model = new ModelWithAudit($this->getSqliteTestPersistence());
         $model->set('name', 'Dede');
         $data = [];
@@ -100,7 +104,8 @@ class AuditTraitTest extends TestCase
         );
     }
 
-    public function testStringsLooselyComparedNoAudit() {
+    public function testStringsLooselyComparedNoAudit()
+    {
         $model = new ModelWithAudit($this->getSqliteTestPersistence());
         $model->set('name', null);
         $data = [];
@@ -112,7 +117,8 @@ class AuditTraitTest extends TestCase
         );
     }
 
-    public function testSeveralFieldChangesCreateOneAuditEntry() {
+    public function testSeveralFieldChangesCreateOneAuditEntry()
+    {
         $model = new ModelWithAudit($this->getSqliteTestPersistence());
         $model->set('name', 'Lala');
         $model->set('other_field', 'Gaga');
@@ -129,7 +135,8 @@ class AuditTraitTest extends TestCase
         );
     }
 
-    public function testAuditRemainsAfterDeletingModel() {
+    public function testAuditRemainsAfterDeletingModel()
+    {
         $persistence = $this->getSqliteTestPersistence();
         $model = new ModelWithAudit($persistence);
         $model->set('name', 'Lala');
@@ -153,7 +160,8 @@ class AuditTraitTest extends TestCase
         );
     }
 
-    public function testCreateChangeAndDeleteAuditIsAdded() {
+    public function testCreateChangeAndDeleteAuditIsAdded()
+    {
         $persistence = $this->getSqliteTestPersistence();
         $model = new ModelWithAudit($persistence);
         $model->set('name', 'Lala');
@@ -200,7 +208,8 @@ class AuditTraitTest extends TestCase
         );
     }
 
-    public function testAddSecondaryAudit() {
+    public function testAddSecondaryAudit()
+    {
         $persistence = $this->getSqliteTestPersistence([Email::class]);
         $model = new ModelWithAudit($persistence);
         $model->save();
@@ -214,7 +223,8 @@ class AuditTraitTest extends TestCase
         );
     }
 
-    public function testAddSecondaryAuditWithDifferentModelClassAndId() {
+    public function testAddSecondaryAuditWithDifferentModelClassAndId()
+    {
         $persistence = $this->getSqliteTestPersistence([Email::class]);
         $model = new ModelWithAudit($persistence);
         $model->save();
@@ -238,7 +248,8 @@ class AuditTraitTest extends TestCase
         );
     }
 
-    public function testAddAdditionalAudit() {
+    public function testAddAdditionalAudit()
+    {
         $persistence = $this->getSqliteTestPersistence();
         $model = new ModelWithAudit($persistence);
         $model->save();
@@ -250,7 +261,8 @@ class AuditTraitTest extends TestCase
         );
     }
 
-    public function testTimeFieldAudit() {
+    public function testTimeFieldAudit()
+    {
         $persistence = $this->getSqliteTestPersistence();
         $model = new ModelWithAudit($persistence);
         $model->set('time', '11:11');
@@ -263,7 +275,8 @@ class AuditTraitTest extends TestCase
         );
     }
 
-    public function testDateTimeFieldAudit() {
+    public function testDateTimeFieldAudit()
+    {
         $persistence = $this->getSqliteTestPersistence();
         $model = new ModelWithAudit($persistence);
         $model->set('datetime', '2020-01-01T11:11:00+00:00');
@@ -276,7 +289,8 @@ class AuditTraitTest extends TestCase
         );
     }
 
-    public function testDateFieldAudit() {
+    public function testDateFieldAudit()
+    {
         $persistence = $this->getSqliteTestPersistence();
         $model = new ModelWithAudit($persistence);
         $model->set('date', '2020-01-01T11:11:00+00:00');
@@ -289,7 +303,8 @@ class AuditTraitTest extends TestCase
         );
     }
 
-    public function testHasOneAudit() {
+    public function testHasOneAudit()
+    {
         $persistence = $this->getSqliteTestPersistence();
         $model = new ModelWithAudit($persistence);
 
@@ -316,6 +331,7 @@ class AuditTraitTest extends TestCase
 
         $model->set('user_id', $user2->get('id'));
         $model->save();
+        $audit = $model->ref(Audit::class);
         $audit->loadAny();
         self::assertEquals(
             [
@@ -328,6 +344,7 @@ class AuditTraitTest extends TestCase
 
         $model->set('user_id', null);
         $model->save();
+        $audit = $model->ref(Audit::class);
         $audit->loadAny();
         self::assertEquals(
             [
@@ -340,7 +357,8 @@ class AuditTraitTest extends TestCase
     }
 
 
-    public function testValuesFieldAudit() {
+    public function testValuesFieldAudit()
+    {
         $persistence = $this->getSqliteTestPersistence();
         $model = new ModelWithAudit($persistence);
 
@@ -385,8 +403,8 @@ class AuditTraitTest extends TestCase
     }
 
 
-
-    public function testDropDownFieldAudit() {
+    public function testDropDownFieldAudit()
+    {
         $persistence = $this->getSqliteTestPersistence();
         $model = new ModelWithAudit($persistence);
 

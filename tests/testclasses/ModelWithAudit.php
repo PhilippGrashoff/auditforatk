@@ -17,7 +17,7 @@ class ModelWithAudit extends Model
 
     public $table = 'model_with_audit';
 
-    public function init(): void
+    protected function init(): void
     {
         parent::init();
 

@@ -10,7 +10,8 @@ use secondarymodelforatk\SecondaryModel;
 use traitsforatkdata\CreatedDateAndLastUpdatedTrait;
 
 
-class Audit extends SecondaryModel {
+class Audit extends SecondaryModel
+{
 
     use CreatedDateAndLastUpdatedTrait;
     use ModelWithAppTrait;
@@ -24,7 +25,8 @@ class Audit extends SecondaryModel {
     public $reload_after_save = false;
 
 
-    public function init(): void {
+    protected function init(): void
+    {
         parent::init();
 
         $this->addCreatedDateAndLastUpdateFields();
@@ -34,29 +36,29 @@ class Audit extends SecondaryModel {
             [
                 [
                     'data',
-                    'type'      => 'array',
+                    'type' => 'array',
                     'serialize' => 'serialize'
                 ],
                 //store the name of the creator. Might be needed to re-render rendered_output
                 [
                     'created_by_name',
-                    'type'      => 'string'
+                    'type' => 'string'
                 ],
                 [
                     'rendered_output',
-                    'type'      => 'string'
+                    'type' => 'string'
                 ],
             ]
         );
 
 
-        $this->setOrder('created_date desc');
+        $this->setOrder(['created_date' => 'desc']);
 
         // add Name of currently logged in user to "created_by_name" field
         $this->onHook(
             Model::HOOK_BEFORE_SAVE,
-            function(Model $model, $isUpdate) {
-                if(
+            function (self $model, $isUpdate) {
+                if (
                     isset($model->app->auth->user)
                     && $model->app->auth->user->loaded()
                 ) {
@@ -68,8 +70,8 @@ class Audit extends SecondaryModel {
         // add possibility to add custom renderer which makes nice messages
         $this->onHook(
             Model::HOOK_BEFORE_SAVE,
-            function(Model $model, $isUpdate) {
-                if($this->auditRenderer instanceof AuditRendererInterface) {
+            function (self $model, $isUpdate) {
+                if ($this->auditRenderer instanceof AuditRendererInterface) {
                     $model->set('rendered_output', $this->auditRenderer->renderMessage($this));
                 }
             }

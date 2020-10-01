@@ -15,6 +15,8 @@ use atk4\data\Model;
 trait ModelWithAuditTrait
 {
 
+    protected $dirtyBeforeSave = [];
+
     /**
      * use in Model::init() to quickly set up reference and hooks
      */
@@ -47,6 +49,14 @@ trait ModelWithAuditTrait
             }
         );
 
+        $this->onHook(
+            Model::HOOK_BEFORE_SAVE,
+            function (self $model, $isUpdate) {
+                $model->dirtyBeforeSave = $model->dirty;
+            },
+            [],
+            999
+        );
         return $ref;
     }
 
@@ -71,7 +81,7 @@ trait ModelWithAuditTrait
 
         $data = [];
         //TODO: This will fail with atk 2.3 where dirty_after_save behaviour changed
-        foreach ($this->dirty as $fieldName => $dirtyValue) {
+        foreach ($this->dirtyBeforeSave as $fieldName => $dirtyValue) {
             $this->_addFieldToAudit($data, $fieldName, $dirtyValue);
         }
 

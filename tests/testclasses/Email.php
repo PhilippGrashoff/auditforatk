@@ -11,7 +11,7 @@ class Email extends SecondaryModel {
 
     public $table = 'email';
 
-    public function init(): void
+    protected function init(): void
     {
         parent::init();
         $this->addField('name');
