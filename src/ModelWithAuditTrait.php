@@ -285,15 +285,15 @@ trait ModelWithAuditTrait
     /**
      * used to create a array containing the audit data for a one to many relation field
      */
-    private function _hasOneAudit(string $fieldName, $dirtyValue, string $titleField = 'name'): array
+    private function _hasOneAudit(string $fieldName, $dirtyValue): array
     {
         $old = $this->ref($fieldName)->newInstance();
         $old->tryLoad($dirtyValue);
         $new = $this->ref($fieldName)->newInstance();
         $new->tryLoad($this->get($fieldName));
 
-        $newValue = $new->loaded() ? $new->get($titleField) : $this->get($fieldName);
-        $oldValue = $old->loaded() ? $old->get($titleField) : $dirtyValue;
+        $newValue = $new->loaded() ? $new->get($new->title_field) : $this->get($fieldName);
+        $oldValue = $old->loaded() ? $old->get($new->title_field) : $dirtyValue;
 
         return [
             'field_name' => $this->getField($fieldName)->getCaption(),
