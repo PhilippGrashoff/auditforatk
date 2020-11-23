@@ -39,10 +39,21 @@ class ModelWithAudit extends Model
             'dropdown',
             [
                 'caption' => 'DropDownTest',
-                'ui' => ['form' => [Dropdown::class, 'values' => [0 => 'SomeValue', 1 => 'SomeOtherValue'], 'empty' => '']]
+                'ui' => [
+                    'form' => [
+                        Dropdown::class,
+                        'values' => [0 => 'SomeValue', 1 => 'SomeOtherValue'],
+                        'empty' => ''
+                    ]
+                ]
             ]
         );
 
         $this->hasOne('user_id', [User::class, 'caption' => 'Benutzer']);
+    }
+
+    public function setSkipFields(array $fields): void
+    {
+        $this->skipFieldsFromAudit = $fields;
     }
 }

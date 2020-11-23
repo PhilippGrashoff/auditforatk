@@ -17,6 +17,9 @@ trait ModelWithAuditTrait
 
     protected $dirtyBeforeSave = [];
 
+    protected $skipFieldsFromAudit = [];
+
+
     /**
      * use in Model::init() to quickly set up reference and hooks
      */
@@ -79,6 +82,13 @@ trait ModelWithAuditTrait
             return;
         }
 
+        if ($type == 'CREATE') {
+            $audit = new Audit($this->persistence, ['parentObject' => $this]);
+            $audit->set('value', $type);
+            $audit->save();
+            $type = 'CHANGE';
+        }
+
         $data = [];
         //TODO: This will fail with atk 2.3 where dirty_after_save behaviour changed
         foreach ($this->dirtyBeforeSave as $fieldName => $dirtyValue) {
@@ -97,7 +107,8 @@ trait ModelWithAuditTrait
     {
         //only audit non system fields and fields that go to persistence
         if (
-            !$this->hasField($fieldName)
+            in_array($fieldName, $this->skipFieldsFromAudit)
+            || !$this->hasField($fieldName)
             || $fieldName === $this->id_field
             || $this->getField($fieldName)->never_persist
         ) {

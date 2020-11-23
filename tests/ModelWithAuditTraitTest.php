@@ -10,7 +10,7 @@ use auditforatk\tests\testclasses\User;
 use traitsforatkdata\TestCase;
 
 
-class AuditTraitTest extends TestCase
+class ModelWithAuditTraitTest extends TestCase
 {
     protected $sqlitePersistenceModels = [
         Audit::class,
@@ -70,13 +70,13 @@ class AuditTraitTest extends TestCase
         $model->set('name', 'Lala');
         $model->save();
         self::assertEquals(
-            1,
+            2,
             $model->ref(Audit::class)->action('count')->getOne()
         );
         $model->set('name', 'Lala');
         $model->save();
         self::assertEquals(
-            1,
+            2,
             $model->ref(Audit::class)->action('count')->getOne()
         );
     }
@@ -125,7 +125,7 @@ class AuditTraitTest extends TestCase
         $model->save();
 
         self::assertEquals(
-            1,
+            2,
             $model->ref(Audit::class)->action('count')->getOne()
         );
 
@@ -144,7 +144,7 @@ class AuditTraitTest extends TestCase
         $model->save();
 
         self::assertEquals(
-            1,
+            2,
             $model->ref(Audit::class)->action('count')->getOne()
         );
 
@@ -155,7 +155,7 @@ class AuditTraitTest extends TestCase
         $auditForModel->set('model_class', ModelWithAudit::class);
 
         self::assertEquals(
-            2,
+            3,
             $auditForModel->action('count')->getOne()
         );
     }
@@ -176,7 +176,7 @@ class AuditTraitTest extends TestCase
         $auditForModel->set('model_class', ModelWithAudit::class);
 
         self::assertEquals(
-            3,
+            4,
             $auditForModel->action('count')->getOne()
         );
 
@@ -185,12 +185,9 @@ class AuditTraitTest extends TestCase
         foreach ($check as $valueName) {
             $checkAudit = clone $auditForModel;
             $checkAudit->addCondition('value', $valueName);
-            $checkAudit->loadAny();
+            $checkAudit->tryLoadAny();
 
-            self::assertEquals(
-                1,
-                $checkAudit->action('count')->getOne()
-            );
+            self::assertTrue($checkAudit->loaded());
         }
     }
 
@@ -474,5 +471,32 @@ class AuditTraitTest extends TestCase
         );
     }
 
+    public function testSkipFieldsIfSet()
+    {
+        $persistence = $this->getSqliteTestPersistence();
+        $model = new ModelWithAudit($persistence);
+        $model->set('other_field', 'bla');
+        $model->save();
+        self::assertSame(
+            2,
+            (int)$model->ref(Audit::class)->action('count')->getOne()
+        );
 
+        //now disable audit for that field
+        $model->setSkipFields(['other_field']);
+        $model->set('other_field', 'du');
+        $model->save();
+        self::assertSame(
+            2,
+            (int)$model->ref(Audit::class)->action('count')->getOne()
+        );
+        //reenable, audit should be created
+        $model->setSkipFields(['name']);
+        $model->set('other_field', 'kra');
+        $model->save();
+        self::assertSame(
+            3,
+            (int)$model->ref(Audit::class)->action('count')->getOne()
+        );
+    }
 }
