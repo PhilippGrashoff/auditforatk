@@ -1,25 +1,26 @@
 {
   "name": "philippgrashoff/auditforatk",
+  "description": "",
   "minimum-stability": "dev",
   "prefer-stable": true,
-  "config":{
-    "platform":{
-      "php":"7.3"
+  "config": {
+    "platform": {
+      "php": "7.3"
     }
   },
-  "require":{
-    "atk4/data": "2.3.0",
-    "atk4/core": "2.3.0",
+  "require": {
+    "atk4/data": "2.3.6",
+    "atk4/core": "2.3.5",
     "philippgrashoff/traitsforatkdata": "master",
     "philippgrashoff/secondarymodelforatk": "master"
   },
   "require-dev": {
     "phpunit/phpunit": ">8",
-    "atk4/ui": "2.3.0"
+    "atk4/ui": "2.3.5"
   },
-  "autoload":{
-    "psr-4":{
-      "auditforatk\\":"src"
+  "autoload": {
+    "psr-4": {
+      "auditforatk\\": "src"
     }
   },
   "autoload-dev": {
