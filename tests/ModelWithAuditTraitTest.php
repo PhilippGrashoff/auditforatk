@@ -4,6 +4,7 @@ namespace auditforatk\tests;
 
 use auditforatk\Audit;
 use auditforatk\tests\testclasses\AppWithAuditSetting;
+use auditforatk\tests\testclasses\AuditRendererDemo;
 use auditforatk\tests\testclasses\Email;
 use auditforatk\tests\testclasses\ModelWithAudit;
 use auditforatk\tests\testclasses\User;
@@ -497,6 +498,21 @@ class ModelWithAuditTraitTest extends TestCase
         self::assertSame(
             3,
             (int)$model->ref(Audit::class)->action('count')->getOne()
+        );
+    }
+
+    public function testAuditRendererIsPassed()
+    {
+        $persistence = $this->getSqliteTestPersistence();
+        $model = new ModelWithAudit($persistence, ['auditRenderer' => new AuditRendererDemo()]);
+        $model->set('other_field', 'bla');
+        $model->save();
+
+        $audit = $model->getAuditViewModel();
+        $audit->loadAny();
+        self::assertSame(
+            "Demo",
+            $audit->get('rendered_output')
         );
     }
 }

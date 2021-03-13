@@ -5,9 +5,9 @@ declare(strict_types=1);
 namespace auditforatk;
 
 use atk4\data\Model;
-use traitsforatkdata\ModelWithAppTrait;
 use secondarymodelforatk\SecondaryModel;
 use traitsforatkdata\CreatedDateAndLastUpdatedTrait;
+use traitsforatkdata\ModelWithAppTrait;
 
 
 class Audit extends SecondaryModel
@@ -19,7 +19,7 @@ class Audit extends SecondaryModel
 
     public $table = 'audit';
 
-    public $auditRenderer = null;
+    protected $auditRenderer;
 
     //no need to reload audit records
     public $reload_after_save = false;

@@ -4,12 +4,12 @@ declare(strict_types=1);
 
 namespace auditforatk;
 
+use atk4\data\Model;
 use atk4\data\Reference;
 use atk4\data\Reference\HasOne;
 use atk4\ui\Dropdown;
-use secondarymodelforatk\SecondaryModel;
 use ReflectionClass;
-use atk4\data\Model;
+use secondarymodelforatk\SecondaryModel;
 
 
 trait ModelWithAuditTrait
@@ -18,6 +18,8 @@ trait ModelWithAuditTrait
     protected $dirtyBeforeSave = [];
 
     protected $skipFieldsFromAudit = [];
+
+    protected $auditRenderer;
 
 
     /**
@@ -29,7 +31,10 @@ trait ModelWithAuditTrait
             Audit::class,
             [
                 function () {
-                    return (new Audit($this->persistence, ['parentObject' => $this]))
+                    return (new Audit(
+                        $this->persistence,
+                        ['parentObject' => $this, 'auditRenderer' => $this->auditRenderer]
+                    ))
                         ->addCondition('model_class', get_class($this));
                 },
                 'their_field' => 'model_id'
@@ -83,20 +88,19 @@ trait ModelWithAuditTrait
         }
 
         if ($type == 'CREATE') {
-            $audit = new Audit($this->persistence, ['parentObject' => $this]);
+            $audit = new Audit($this->persistence, ['parentObject' => $this, 'auditRenderer' => $this->auditRenderer]);
             $audit->set('value', $type);
             $audit->save();
             $type = 'CHANGE';
         }
 
         $data = [];
-        //TODO: This will fail with atk 2.3 where dirty_after_save behaviour changed
         foreach ($this->dirtyBeforeSave as $fieldName => $dirtyValue) {
             $this->_addFieldToAudit($data, $fieldName, $dirtyValue);
         }
 
         if ($type == 'CREATE' || $data) {
-            $audit = new Audit($this->persistence, ['parentObject' => $this]);
+            $audit = new Audit($this->persistence, ['parentObject' => $this, 'auditRenderer' => $this->auditRenderer]);
             $audit->set('value', $type);
             $audit->set('data', $data);
             $audit->save();
@@ -164,7 +168,7 @@ trait ModelWithAuditTrait
         if (!$this->_checkSkipAudit()) {
             return;
         }
-        $audit = new Audit($this->persistence, ['parentObject' => $this]);
+        $audit = new Audit($this->persistence, ['parentObject' => $this, 'auditRenderer' => $this->auditRenderer]);
         $audit->set('value', 'DELETE');
         $audit->save();
     }
@@ -182,7 +186,7 @@ trait ModelWithAuditTrait
         if (!$this->_checkSkipAudit()) {
             return;
         }
-        $audit = new Audit($this->persistence, ['parentObject' => $this]);
+        $audit = new Audit($this->persistence, ['parentObject' => $this, 'auditRenderer' => $this->auditRenderer]);
         //TODO: Why shortname? store full, easier, cant lead to unintended errors
         //In general, ADD_SECONDARY and storing the class name in data array is more sensible!
         $audit->set('value', $type . '_' . strtoupper((new ReflectionClass($model))->getShortName()));
@@ -214,7 +218,7 @@ trait ModelWithAuditTrait
             return;
         }
 
-        $audit = new Audit($this->persistence, ['parentObject' => $this]);
+        $audit = new Audit($this->persistence, ['parentObject' => $this, 'auditRenderer' => $this->auditRenderer]);
         //TODO: Why shortname? store full, easier, cant lead to unintended errors
         //In general, ADD_MTOM and storing the class name in data array is more sensible!
         $audit->set('value', $type . '_' . strtoupper((new ReflectionClass($model))->getShortName()));
@@ -237,7 +241,7 @@ trait ModelWithAuditTrait
         if (!$this->_checkSkipAudit()) {
             return;
         }
-        $audit = new Audit($this->persistence, ['parentObject' => $this]);
+        $audit = new Audit($this->persistence, ['parentObject' => $this, 'auditRenderer' => $this->auditRenderer]);
         $audit->set('value', $type);
         $audit->set('data', $data);
         $audit->save();

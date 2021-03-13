@@ -27,8 +27,7 @@ class AuditTest extends TestCase {
     }
 
     public function testAuditMessageRendererIsUsed() {
-        $audit = new Audit($this->getPersistence());
-        $audit->auditRenderer = new AuditRendererDemo();
+        $audit = new Audit($this->getPersistence(), ['auditRenderer' => new AuditRendererDemo()]);
         $audit->save();
         self::assertEquals(
             $audit->get('rendered_output'),
