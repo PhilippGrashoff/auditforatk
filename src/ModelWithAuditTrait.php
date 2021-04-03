@@ -350,8 +350,8 @@ trait ModelWithAuditTrait
     {
         //add possibility to skip auditing App-wide, e.g. to speed up tests
         if (
-            isset($this->app->createAudit)
-            && !$this->app->createAudit
+            isset($this->persistence->app->createAudit)
+            && !$this->persistence->app->createAudit
         ) {
             return false;
         }
