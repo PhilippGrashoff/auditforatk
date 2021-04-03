@@ -21,6 +21,9 @@ trait ModelWithAuditTrait
 
     protected $auditRenderer;
 
+    //possibility to disable Audit, e.g. if a base class has audit but some extended class shouldn't
+    protected bool $noAudit = false;
+
 
     /**
      * use in Model::init() to quickly set up reference and hooks
@@ -350,6 +353,10 @@ trait ModelWithAuditTrait
             isset($this->app->createAudit)
             && !$this->app->createAudit
         ) {
+            return false;
+        }
+
+        if($this->noAudit) {
             return false;
         }
 

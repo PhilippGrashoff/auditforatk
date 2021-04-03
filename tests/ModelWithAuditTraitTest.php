@@ -53,6 +53,29 @@ class ModelWithAuditTraitTest extends TestCase
         );
     }
 
+    public function testNoAuditSettingDisablesAudit(): void {
+        $model = new ModelWithAudit($this->getSqliteTestPersistence(), ['noAudit' => true]);
+        $model->set('name', 'Lala');
+        $model->save();
+
+        $user = new User($this->getSqliteTestPersistence());
+        $user->save();
+        $model->addMToMAudit('ADD', $user);
+        $model->addAdditionalAudit('SOMETYPE', []);
+
+        $audit = $model->ref(Audit::class);
+        self::assertEquals(
+            0,
+            $audit->action('count')->getOne()
+        );
+
+        $model->delete();
+        self::assertEquals(
+            0,
+            $audit->action('count')->getOne()
+        );
+    }
+
     public function testGetAuditViewModel()
     {
         $model = new ModelWithAudit($this->getSqliteTestPersistence());
