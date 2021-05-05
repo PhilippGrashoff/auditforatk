@@ -9,14 +9,12 @@
     }
   },
   "require": {
-    "atk4/data": "2.3.6",
-    "atk4/core": "2.3.5",
-    "philippgrashoff/traitsforatkdata": "master",
+    "atk4/data": "2.4.*",
     "philippgrashoff/secondarymodelforatk": "master"
   },
   "require-dev": {
     "phpunit/phpunit": ">8",
-    "atk4/ui": "2.3.5"
+    "atk4/ui": "2.4.*"
   },
   "autoload": {
     "psr-4": {

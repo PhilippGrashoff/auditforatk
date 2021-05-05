@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace auditforatk\tests\testclasses;
 
-use atk4\data\Model;
+use Atk4\Data\Model;
 use secondarymodelforatk\SecondaryModel;
 
 class Email extends SecondaryModel {

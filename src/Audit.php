@@ -4,18 +4,15 @@ declare(strict_types=1);
 
 namespace auditforatk;
 
-use atk4\data\Model;
+use Atk4\Data\Model;
 use secondarymodelforatk\SecondaryModel;
 use traitsforatkdata\CreatedDateAndLastUpdatedTrait;
-use traitsforatkdata\ModelWithAppTrait;
 
 
 class Audit extends SecondaryModel
 {
 
     use CreatedDateAndLastUpdatedTrait;
-    use ModelWithAppTrait;
-
 
     public $table = 'audit';
 
@@ -59,10 +56,10 @@ class Audit extends SecondaryModel
             Model::HOOK_BEFORE_SAVE,
             function (self $model, $isUpdate) {
                 if (
-                    isset($model->app->auth->user)
-                    && $model->app->auth->user->loaded()
+                    isset($model->persistence->app->auth->user)
+                    && $model->persistence->app->auth->user->loaded()
                 ) {
-                    $model->set('created_by_name', $model->app->auth->user->get('name'));
+                    $model->set('created_by_name', $model->persistence->app->auth->user->get('name'));
                 }
             }
         );

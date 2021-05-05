@@ -2,7 +2,7 @@
 
 namespace auditforatk\tests;
 
-use atk4\data\Persistence;
+use Atk4\Data\Persistence;
 use auditforatk\Audit;
 use traitsforatkdata\TestCase;
 use auditforatk\tests\testclasses\AppWithAuditSetting;

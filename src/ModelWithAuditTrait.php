@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 namespace auditforatk;
 
-use atk4\data\Model;
-use atk4\data\Reference;
-use atk4\data\Reference\HasOne;
-use atk4\ui\Dropdown;
+use Atk4\Data\Model;
+use Atk4\Data\Reference;
+use Atk4\Data\Reference\HasOne;
+use Atk4\Ui\Dropdown;
 use ReflectionClass;
 use secondarymodelforatk\SecondaryModel;
 
@@ -33,7 +33,7 @@ trait ModelWithAuditTrait
         $ref = $this->hasMany(
             Audit::class,
             [
-                function () {
+                'model' => function () {
                     return (new Audit(
                         $this->persistence,
                         ['parentObject' => $this, 'auditRenderer' => $this->auditRenderer]

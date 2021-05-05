@@ -4,16 +4,14 @@ declare(strict_types=1);
 
 namespace auditforatk\tests\testclasses;
 
-use atk4\data\Model;
-use atk4\ui\Dropdown;
+use Atk4\Data\Model;
+use Atk4\Ui\Dropdown;
 use auditforatk\ModelWithAuditTrait;
-use traitsforatkdata\ModelWithAppTrait;
 
 class ModelWithAudit extends Model
 {
 
     use ModelWithAuditTrait;
-    use ModelWithAppTrait;
 
     public $table = 'model_with_audit';
 
@@ -49,7 +47,7 @@ class ModelWithAudit extends Model
             ]
         );
 
-        $this->hasOne('user_id', [User::class, 'caption' => 'Benutzer']);
+        $this->hasOne('user_id', ['model' => [User::class], 'caption' => 'Benutzer']);
     }
 
     public function setSkipFields(array $fields): void

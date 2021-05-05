@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace auditforatk\tests\testclasses;
 
-use atk4\ui\App;
+use Atk4\Ui\App;
 
 
 class AppWithAuditSetting extends App {
