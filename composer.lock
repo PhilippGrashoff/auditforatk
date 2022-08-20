@@ -4,7 +4,11 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
+<<<<<<< HEAD
     "content-hash": "6726d472de28a4bd7842dd2c9906a1a6",
+=======
+    "content-hash": "ab4eb5a7bef8cb6df922f2e44eb2e1e7",
+>>>>>>> master
     "packages": [
         {
             "name": "atk4/core",
@@ -77,9 +81,15 @@
             ],
             "support": {
                 "issues": "https://github.com/atk4/core/issues",
+<<<<<<< HEAD
                 "source": "https://github.com/atk4/core/tree/2.4.1"
             },
             "time": "2021-04-17T06:05:03+00:00"
+=======
+                "source": "https://github.com/atk4/core/tree/2.3.5"
+            },
+            "time": "2020-12-04T01:41:39+00:00"
+>>>>>>> master
         },
         {
             "name": "atk4/data",
@@ -157,9 +167,15 @@
             ],
             "support": {
                 "issues": "https://github.com/atk4/data/issues",
+<<<<<<< HEAD
                 "source": "https://github.com/atk4/data/tree/2.4.0"
             },
             "time": "2021-04-16T10:39:06+00:00"
+=======
+                "source": "https://github.com/atk4/data/tree/2.3.6"
+            },
+            "time": "2020-12-11T13:54:57+00:00"
+>>>>>>> master
         },
         {
             "name": "atk4/dsql",
@@ -227,9 +243,16 @@
             ],
             "support": {
                 "issues": "https://github.com/atk4/dsql/issues",
+<<<<<<< HEAD
                 "source": "https://github.com/atk4/dsql/tree/2.4.0"
             },
             "time": "2021-04-16T10:36:06+00:00"
+=======
+                "source": "https://github.com/atk4/dsql/tree/2.3.5"
+            },
+            "abandoned": true,
+            "time": "2020-12-04T01:49:16+00:00"
+>>>>>>> master
         },
         {
             "name": "atk4/ui",
@@ -325,10 +348,18 @@
                 "widget"
             ],
             "support": {
+<<<<<<< HEAD
                 "issues": "https://github.com/atk4/ui/issues",
                 "source": "https://github.com/atk4/ui/tree/2.4.0"
             },
             "time": "2021-04-16T11:03:39+00:00"
+=======
+                "issues": "https://github.com/atk4/schema/issues",
+                "source": "https://github.com/atk4/schema/tree/2.3.1"
+            },
+            "abandoned": true,
+            "time": "2020-10-13T22:53:50+00:00"
+>>>>>>> master
         },
         {
             "name": "composer/package-versions-deprecated",
@@ -787,6 +818,7 @@
                     "email": "mvorisek@mvorisek.cz"
                 }
             ],
+<<<<<<< HEAD
             "description": "Hintable extension for atk4 libraries",
             "homepage": "https://www.mahalux.com/",
             "support": {
@@ -794,13 +826,36 @@
                 "source": "https://github.com/mvorisek/atk4-hintable-mirror/tree/1.2.1"
             },
             "time": "2021-04-15T15:10:36+00:00"
+=======
+            "description": "Agile UI - Web Component Framework written in PHP",
+            "homepage": "https://github.com/atk4/ui",
+            "keywords": [
+                "button",
+                "component",
+                "crud",
+                "form",
+                "framework",
+                "gadget",
+                "grid",
+                "render",
+                "ui",
+                "web",
+                "widget"
+            ],
+            "support": {
+                "issues": "https://github.com/atk4/ui/issues",
+                "source": "https://github.com/atk4/ui/tree/2.3.5"
+            },
+            "time": "2020-12-04T01:51:07+00:00"
+>>>>>>> master
         },
         {
             "name": "philippgrashoff/secondarymodelforatk",
-            "version": "dev-master",
+            "version": "2.3.1",
             "source": {
                 "type": "git",
                 "url": "https://github.com/PhilippGrashoff/secondarymodelforatk.git",
+<<<<<<< HEAD
                 "reference": "8080e3ad1ed5bb9a701a573e610d683c4088385b"
             },
             "dist": {
@@ -812,6 +867,19 @@
             "require": {
                 "atk4/data": "2.4.*",
                 "philippgrashoff/traitsforatkdata": "dev-master"
+=======
+                "reference": "4d61bd81ff6777084f1da78682c8ba7a31e24a51"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/PhilippGrashoff/secondarymodelforatk/zipball/4d61bd81ff6777084f1da78682c8ba7a31e24a51",
+                "reference": "4d61bd81ff6777084f1da78682c8ba7a31e24a51",
+                "shasum": ""
+            },
+            "require": {
+                "atk4/data": "2.3.6",
+                "philippgrashoff/traitsforatkdata": "2.3.*"
+>>>>>>> master
             },
             "require-dev": {
                 "phpunit/phpunit": ">8"
@@ -826,13 +894,19 @@
             "notification-url": "https://packagist.org/downloads/",
             "support": {
                 "issues": "https://github.com/PhilippGrashoff/secondarymodelforatk/issues",
+<<<<<<< HEAD
                 "source": "https://github.com/PhilippGrashoff/secondarymodelforatk/tree/master"
             },
             "time": "2021-05-02T20:25:14+00:00"
+=======
+                "source": "https://github.com/PhilippGrashoff/secondarymodelforatk/tree/2.3.1"
+            },
+            "time": "2021-05-13T16:10:49+00:00"
+>>>>>>> master
         },
         {
             "name": "philippgrashoff/traitsforatkdata",
-            "version": "dev-master",
+            "version": "2.3",
             "source": {
                 "type": "git",
                 "url": "https://github.com/PhilippGrashoff/traitsforatkdata.git",
@@ -862,9 +936,15 @@
             "notification-url": "https://packagist.org/downloads/",
             "support": {
                 "issues": "https://github.com/PhilippGrashoff/traitsforatkdata/issues",
+<<<<<<< HEAD
                 "source": "https://github.com/PhilippGrashoff/traitsforatkdata/tree/master"
             },
             "time": "2021-05-02T20:11:06+00:00"
+=======
+                "source": "https://github.com/PhilippGrashoff/traitsforatkdata/tree/2.3"
+            },
+            "time": "2021-03-11T10:57:14+00:00"
+>>>>>>> master
         },
         {
             "name": "psr/log",
@@ -1223,6 +1303,7 @@
                     "type": "tidelift"
                 }
             ],
+<<<<<<< HEAD
             "time": "2021-01-07T16:49:33+00:00"
         },
         {
@@ -1299,6 +1380,8 @@
                     "type": "tidelift"
                 }
             ],
+=======
+>>>>>>> master
             "time": "2021-01-07T16:49:33+00:00"
         },
         {
