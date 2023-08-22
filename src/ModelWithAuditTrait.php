@@ -7,19 +7,20 @@ namespace auditforatk;
 use Atk4\Data\Model;
 use Atk4\Data\Reference;
 use Atk4\Data\Reference\HasOne;
-use Atk4\Ui\Dropdown;
 use ReflectionClass;
 use secondarymodelforatk\SecondaryModel;
 
-
+/**
+ * @extends Model<Model>
+ */
 trait ModelWithAuditTrait
 {
 
-    protected $dirtyBeforeSave = [];
+    protected array $dirtyBeforeSave = [];
 
-    protected $skipFieldsFromAudit = [];
+    protected array $skipFieldsFromAudit = [];
 
-    protected $auditRenderer;
+    protected AuditRendererInterface $auditRenderer;
 
     //possibility to disable Audit, e.g. if a base class has audit but some extended class shouldn't
     protected bool $noAudit = false;
@@ -35,19 +36,19 @@ trait ModelWithAuditTrait
             [
                 'model' => function () {
                     return (new Audit(
-                        $this->persistence,
+                        $this->getPersistence(),
                         ['parentObject' => $this, 'auditRenderer' => $this->auditRenderer]
                     ))
                         ->addCondition('model_class', get_class($this));
                 },
-                'their_field' => 'model_id'
+                'theirField' => 'model_id'
             ]
         );
 
         //after save, create Audit
         $this->onHook(
             Model::HOOK_AFTER_SAVE,
-            function ($model, $isUpdate) {
+            function (self $model, bool $isUpdate) {
                 $model->createAudit($isUpdate ? 'CHANGE' : 'CREATE');
             }
         );
@@ -55,14 +56,14 @@ trait ModelWithAuditTrait
         //after delete, create Audit
         $this->onHook(
             Model::HOOK_AFTER_DELETE,
-            function ($model) {
+            function (self $model) {
                 $model->createDeleteAudit();
             }
         );
 
         $this->onHook(
             Model::HOOK_BEFORE_SAVE,
-            function (self $model, $isUpdate) {
+            function (self $model) {
                 $model->dirtyBeforeSave = $model->dirty;
             },
             [],
@@ -71,18 +72,14 @@ trait ModelWithAuditTrait
         return $ref;
     }
 
-    /**
-     * usually returns $this->ref('Audit'). May be overwritten by descendants
-     * to add a more complex Audit model (e.g. Coupons and AccountingItems)
-     * TODO: Rename, name is misleading
-     */
-    public function getAuditViewModel(): Audit
-    {
-        return $this->ref(Audit::class);
-    }
 
     /**
-     * Save any change in Model Fields to Audit
+     *  Save any change in Model Fields to Audit
+     *
+     * @param string $type
+     * @return void
+     * @throws \Atk4\Core\Exception
+     * @throws \Atk4\Data\Exception
      */
     public function createAudit(string $type): void
     {
@@ -110,6 +107,12 @@ trait ModelWithAuditTrait
         }
     }
 
+    /**
+     * @param array $data
+     * @param string $fieldName
+     * @param $dirtyValue
+     * @return void
+     */
     protected function _addFieldToAudit(array &$data, string $fieldName, $dirtyValue): void
     {
         //only audit non system fields and fields that go to persistence
@@ -166,6 +169,9 @@ trait ModelWithAuditTrait
         }
     }
 
+    /**
+     * @return void
+     */
     public function createDeleteAudit(): void
     {
         if (!$this->_checkSkipAudit()) {
@@ -178,6 +184,13 @@ trait ModelWithAuditTrait
 
     /**
      * creates an Audit for secondary models like emails, if it was added, changed or removed
+     *
+     * @param string $type
+     * @param SecondaryModel $model
+     * @param string $field
+     * @param string|null $modelClass
+     * @param $modelId
+     * @return void
      */
     public function addSecondaryAudit(
         string $type,
@@ -202,7 +215,7 @@ trait ModelWithAuditTrait
         //only save if some value is there or some change happened
         if ($model->get($field) || isset($model->dirty[$field])) {
             $data = [
-                'old_value' => (isset($model->dirty[$field]) ? $model->dirty[$field] : ''),
+                'old_value' => ($model->dirty[$field] ?? ''),
                 'new_value' => $model->get($field)
             ];
         }
@@ -213,9 +226,12 @@ trait ModelWithAuditTrait
     }
 
     /**
-     * creates an Audit for adding/removing MToM Relations
+     * @param string $type
+     * @param Model $model
+     * @param string $fieldName
+     * @return void
      */
-    public function addMToMAudit(string $type, Model $model, $fieldName = 'name'): void
+    public function addMToMAudit(string $type, Model $model, string $fieldName = 'name'): void
     {
         if (!$this->_checkSkipAudit()) {
             return;
@@ -237,6 +253,9 @@ trait ModelWithAuditTrait
     }
 
     /**
+     * @param string $type
+     * @param array $data
+     * @return void
      * Adds an additional audit entry which is not related to one of the model's fields
      */
     public function addAdditionalAudit(string $type, array $data)

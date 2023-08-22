@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace auditforatk;
 
 use Atk4\Data\Model;
+use atkdatamodeltraits\CreatedDateAndLastUpdatedTrait;
 use secondarymodelforatk\SecondaryModel;
-use traitsforatkdata\CreatedDateAndLastUpdatedTrait;
 
 
 class Audit extends SecondaryModel
@@ -16,42 +16,37 @@ class Audit extends SecondaryModel
 
     public $table = 'audit';
 
-    protected $auditRenderer;
+    protected AuditRendererInterface $auditRenderer;
 
     //no need to reload audit records
-    public $reload_after_save = false;
+    public bool $reloadAfterSave = false;
 
 
     protected function init(): void
     {
         parent::init();
 
-        $this->addCreatedDateAndLastUpdateFields();
-        $this->addCreatedDateAndLastUpdatedHook();
+        $this->addCreatedDateFieldAndHook();
 
-        $this->addFields(
-            [
-                [
-                    'data',
-                    'type' => 'array',
-                    'serialize' => 'serialize'
-                ],
-                //store the name of the creator. Might be needed to re-render rendered_output
-                [
-                    'created_by_name',
-                    'type' => 'string'
-                ],
-                [
-                    'rendered_output',
-                    'type' => 'string'
-                ],
-            ]
+        $this->addField(
+            'data',
+            ['type' => 'json']
         );
 
+        //store the name of the creator for performance. Might be needed to re-render rendered_output
+        $this->addField(
+            'created_by_name',
+            ['type' => 'string']
+        );
+
+        $this->addField(
+            'rendered_output',
+            ['type' => 'text']
+        );
 
         $this->setOrder(['created_date' => 'desc']);
 
-        // add Name of currently logged in user to "created_by_name" field
+        // add Name of currently logged-in user to "created_by_name" field
         $this->onHook(
             Model::HOOK_BEFORE_SAVE,
             function (self $model, $isUpdate) {
