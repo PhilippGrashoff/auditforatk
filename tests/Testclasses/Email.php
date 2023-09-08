@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace auditforatk\tests\testclasses;
+namespace PhilippR\Atk4\Audit\Tests\Testclasses;
 
-use Atk4\Data\Model;
 use secondarymodelforatk\SecondaryModel;
 
-class Email extends SecondaryModel {
+class Email extends SecondaryModel
+{
 
     public $table = 'email';
 

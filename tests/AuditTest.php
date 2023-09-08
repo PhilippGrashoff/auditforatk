@@ -1,23 +1,29 @@
 <?php declare(strict_types=1);
 
-namespace auditforatk\tests;
+namespace PhilippR\Atk4\Audit\Tests;
 
 use Atk4\Data\Persistence;
-use auditforatk\Audit;
-use traitsforatkdata\TestCase;
-use auditforatk\tests\testclasses\AppWithAuditSetting;
-use auditforatk\tests\testclasses\AuditRendererDemo;
-use auditforatk\tests\testclasses\User;
+use Atk4\Data\Persistence\Sql;
+use Atk4\Data\Schema\TestCase;
+use PhilippR\Atk4\Audit\Audit;
+use PhilippR\Atk4\Audit\Tests\Testclasses\AppWithAuditSetting;
+use PhilippR\Atk4\Audit\Tests\Testclasses\AuditRendererDemo;
+use PhilippR\Atk4\Audit\Tests\Testclasses\User;
 
 
-class AuditTest extends TestCase {
+class AuditTest extends TestCase
+{
 
-    protected $sqlitePersistenceModels = [
-        User::class,
-        Audit::class
-    ];
+    protected function setUp(): void
+    {
+        parent::setUp();
+        $this->db = new Sql('sqlite::memory:');
+        $this->createMigrator(new Audit($this->db))->create();
+        $this->createMigrator(new User($this->db))->create();
+    }
 
-    public function testUserInfoOnSave() {
+    public function testUserInfoOnSave()
+    {
         $audit = new Audit($this->getPersistence());
         $audit->save();
         self::assertEquals(
@@ -26,7 +32,8 @@ class AuditTest extends TestCase {
         );
     }
 
-    public function testAuditMessageRendererIsUsed() {
+    public function testAuditMessageRendererIsUsed()
+    {
         $audit = new Audit($this->getPersistence(), ['auditRenderer' => new AuditRendererDemo()]);
         $audit->save();
         self::assertEquals(
@@ -35,15 +42,14 @@ class AuditTest extends TestCase {
         );
     }
 
-    protected function getPersistence(): Persistence {
-        $persistence = $this->getSqliteTestPersistence();
+    protected function getPersistence(): Persistence
+    {
+        $this->db->app = new AppWithAuditSetting();
+        $this->db->app->auth = new \stdClass();
+        $this->db->app->auth->user = new User($this->db);
+        $this->db->app->auth->user->set('name', 'SOME NAME');
+        $this->db->app->auth->user->save();
 
-        $persistence->app = new AppWithAuditSetting();
-        $persistence->app->auth = new \stdClass();
-        $persistence->app->auth->user = new User($persistence);
-        $persistence->app->auth->user->set('name', 'SOME NAME');
-        $persistence->app->auth->user->save();
-
-        return $persistence;
+        return $this->db;
     }
 }

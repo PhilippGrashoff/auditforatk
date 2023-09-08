@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace auditforatk\tests\testclasses;
+namespace PhilippR\Atk4\Audit\Tests\Testclasses;
 
 use Atk4\Data\Model;
 use Atk4\Ui\Dropdown;
-use auditforatk\ModelWithAuditTrait;
+use PhilippR\Atk4\Audit\ModelWithAuditTrait;
 
 class ModelWithAudit extends Model
 {

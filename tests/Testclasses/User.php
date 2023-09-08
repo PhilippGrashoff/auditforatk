@@ -2,11 +2,12 @@
 
 declare(strict_types=1);
 
-namespace auditforatk\tests\testclasses;
+namespace PhilippR\Atk4\Audit\Tests\Testclasses;
 
 use Atk4\Data\Model;
 
-class User extends Model {
+class User extends Model
+{
 
     public $table = 'user';
 

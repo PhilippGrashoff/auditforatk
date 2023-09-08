@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace auditforatk;
+namespace PhilippR\Atk4\Audit;
 
 use Atk4\Data\Model;
 use atkdatamodeltraits\CreatedDateAndLastUpdatedTrait;

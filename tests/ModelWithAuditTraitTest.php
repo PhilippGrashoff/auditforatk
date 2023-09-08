@@ -1,38 +1,43 @@
 <?php declare(strict_types=1);
 
-namespace auditforatk\tests;
+namespace PhilippR\Atk4\Audit\Tests;
 
-use auditforatk\Audit;
-use auditforatk\tests\testclasses\AppWithAuditSetting;
-use auditforatk\tests\testclasses\AuditRendererDemo;
-use auditforatk\tests\testclasses\Email;
-use auditforatk\tests\testclasses\ModelWithAudit;
-use auditforatk\tests\testclasses\User;
-use traitsforatkdata\TestCase;
+use Atk4\Data\Persistence\Sql;
+use Atk4\Data\Schema\TestCase;
+use PhilippR\Atk4\Audit\Audit;
+use PhilippR\Atk4\Audit\Tests\Testclasses\AppWithAuditSetting;
+use PhilippR\Atk4\Audit\Tests\Testclasses\AuditRendererDemo;
+use PhilippR\Atk4\Audit\Tests\Testclasses\Email;
+use PhilippR\Atk4\Audit\Tests\Testclasses\ModelWithAudit;
+use PhilippR\Atk4\Audit\Tests\Testclasses\User;
 
 
 class ModelWithAuditTraitTest extends TestCase
 {
-    protected $sqlitePersistenceModels = [
-        Audit::class,
-        ModelWithAudit::class,
-        User::class
-    ];
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+        $this->db = new Sql('sqlite::memory:');
+        $this->createMigrator(new Audit($this->db))->create();
+        $this->createMigrator(new ModelWithAudit($this->db))->create();
+        $this->createMigrator(new User($this->db))->create();
+    }
 
     public function testSettingInAppDisablesAudit()
     {
-        $persistence = $this->getSqliteTestPersistence([Email::class]);
-        $persistence->app = new AppWithAuditSetting();
-        $persistence->app->createAudit = false;
-        $model = new ModelWithAudit($persistence);
+        $this->db = $this->getSqliteTestPersistence([Email::class]);
+        $this->db->app = new AppWithAuditSetting();
+        $this->db->app->createAudit = false;
+        $model = new ModelWithAudit($this->db);
         $model->set('name', 'Lala');
         $model->save();
 
-        $user = new User($persistence);
+        $user = new User($this->db);
         $user->save();
         $model->addMToMAudit('ADD', $user);
 
-        $email = new Email($persistence);
+        $email = new Email($this->db);
         $email->save();
         $model->addSecondaryAudit('ADD', $email);
 
@@ -53,12 +58,13 @@ class ModelWithAuditTraitTest extends TestCase
         );
     }
 
-    public function testNoAuditSettingDisablesAudit(): void {
-        $model = new ModelWithAudit($this->getSqliteTestPersistence(), ['noAudit' => true]);
+    public function testNoAuditSettingDisablesAudit(): void
+    {
+        $model = new ModelWithAudit($this->db, ['noAudit' => true]);
         $model->set('name', 'Lala');
         $model->save();
 
-        $user = new User($this->getSqliteTestPersistence());
+        $user = new User($this->db);
         $user->save();
         $model->addMToMAudit('ADD', $user);
         $model->addAdditionalAudit('SOMETYPE', []);
@@ -78,7 +84,7 @@ class ModelWithAuditTraitTest extends TestCase
 
     public function testGetAuditViewModel()
     {
-        $model = new ModelWithAudit($this->getSqliteTestPersistence());
+        $model = new ModelWithAudit($this->db);
         self::assertInstanceOf(
             Audit::class,
             $model->getAuditViewModel()
@@ -87,8 +93,7 @@ class ModelWithAuditTraitTest extends TestCase
 
     public function testNoAuditCreatedOnNoChange()
     {
-        $persistence = $this->getSqliteTestPersistence();
-        $model = new ModelWithAudit($persistence);
+        $model = new ModelWithAudit($this->db);
 
         //should create
         $model->set('name', 'Lala');
@@ -107,7 +112,7 @@ class ModelWithAuditTraitTest extends TestCase
 
     public function testIdFieldIsIgnored()
     {
-        $model = new ModelWithAudit($this->getSqliteTestPersistence());
+        $model = new ModelWithAudit($this->db);
         $data = [];
         $this->callProtected($model, '_addFieldToAudit', $data, 'id', '235');
         self::assertSame(
@@ -118,7 +123,7 @@ class ModelWithAuditTraitTest extends TestCase
 
     public function testFieldValueIdenticalNoAudit()
     {
-        $model = new ModelWithAudit($this->getSqliteTestPersistence());
+        $model = new ModelWithAudit($this->db);
         $model->set('name', 'Dede');
         $data = [];
         $this->callProtected($model, '_addFieldToAudit', $data, 'name', 'Dede');
@@ -130,7 +135,7 @@ class ModelWithAuditTraitTest extends TestCase
 
     public function testStringsLooselyComparedNoAudit()
     {
-        $model = new ModelWithAudit($this->getSqliteTestPersistence());
+        $model = new ModelWithAudit($this->db);
         $model->set('name', null);
         $data = [];
         //as strings are compared using ==, null should equal ''
@@ -143,7 +148,7 @@ class ModelWithAuditTraitTest extends TestCase
 
     public function testSeveralFieldChangesCreateOneAuditEntry()
     {
-        $model = new ModelWithAudit($this->getSqliteTestPersistence());
+        $model = new ModelWithAudit($this->db);
         $model->set('name', 'Lala');
         $model->set('other_field', 'Gaga');
         $model->save();
@@ -161,8 +166,7 @@ class ModelWithAuditTraitTest extends TestCase
 
     public function testAuditRemainsAfterDeletingModel()
     {
-        $persistence = $this->getSqliteTestPersistence();
-        $model = new ModelWithAudit($persistence);
+        $model = new ModelWithAudit($this->db);
         $model->set('name', 'Lala');
         $model->set('other_field', 'Gaga');
         $model->save();
@@ -174,7 +178,7 @@ class ModelWithAuditTraitTest extends TestCase
 
         $model->delete();
 
-        $auditForModel = new Audit($persistence);
+        $auditForModel = new Audit($this->db);
         $auditForModel->set('model_id', $model->get('id'));
         $auditForModel->set('model_class', ModelWithAudit::class);
 
@@ -186,8 +190,7 @@ class ModelWithAuditTraitTest extends TestCase
 
     public function testCreateChangeAndDeleteAuditIsAdded()
     {
-        $persistence = $this->getSqliteTestPersistence();
-        $model = new ModelWithAudit($persistence);
+        $model = new ModelWithAudit($this->db);
         $model->set('name', 'Lala');
         $model->set('other_field', 'Gaga');
         $model->save();
@@ -195,7 +198,7 @@ class ModelWithAuditTraitTest extends TestCase
         $model->save();
         $model->delete();
 
-        $auditForModel = new Audit($persistence);
+        $auditForModel = new Audit($this->db);
         $auditForModel->set('model_id', $model->get('id'));
         $auditForModel->set('model_class', ModelWithAudit::class);
 
@@ -217,10 +220,9 @@ class ModelWithAuditTraitTest extends TestCase
 
     public function testMToMAudit()
     {
-        $persistence = $this->getSqliteTestPersistence();
-        $model = new ModelWithAudit($persistence);
+        $model = new ModelWithAudit($this->db);
         $model->save();
-        $user = new User($persistence);
+        $user = new User($this->db);
         $model->addMToMAudit('ADD', $user);
 
         self::assertEquals(
@@ -231,10 +233,10 @@ class ModelWithAuditTraitTest extends TestCase
 
     public function testAddSecondaryAudit()
     {
-        $persistence = $this->getSqliteTestPersistence([Email::class]);
-        $model = new ModelWithAudit($persistence);
+        $this->db = $this->getSqliteTestPersistence([Email::class]);
+        $model = new ModelWithAudit($this->db);
         $model->save();
-        $email = new Email($persistence);
+        $email = new Email($this->db);
         $email->set('value', 'someEmail');
         $model->addSecondaryAudit('ADD', $email);
 
@@ -246,15 +248,15 @@ class ModelWithAuditTraitTest extends TestCase
 
     public function testAddSecondaryAuditWithDifferentModelClassAndId()
     {
-        $persistence = $this->getSqliteTestPersistence([Email::class]);
-        $model = new ModelWithAudit($persistence);
+        $this->db = $this->getSqliteTestPersistence([Email::class]);
+        $model = new ModelWithAudit($this->db);
         $model->save();
 
-        $email = new Email($persistence);
+        $email = new Email($this->db);
         $email->set('value', 'someEmail');
         $model->addSecondaryAudit('ADD', $email, 'value', 'SomeOtherClass', '444');
 
-        $audit = new Audit($persistence);
+        $audit = new Audit($this->db);
         $audit->addCondition('model_class', 'SomeOtherClass');
         $audit->addCondition('model_id', '444');
         $audit->loadAny();
@@ -271,8 +273,7 @@ class ModelWithAuditTraitTest extends TestCase
 
     public function testAddAdditionalAudit()
     {
-        $persistence = $this->getSqliteTestPersistence();
-        $model = new ModelWithAudit($persistence);
+        $model = new ModelWithAudit($this->db);
         $model->save();
         $model->addAdditionalAudit('SOME_TYPE', ['bagga' => 'wagga']);
 
@@ -284,8 +285,7 @@ class ModelWithAuditTraitTest extends TestCase
 
     public function testTimeFieldAudit()
     {
-        $persistence = $this->getSqliteTestPersistence();
-        $model = new ModelWithAudit($persistence);
+        $model = new ModelWithAudit($this->db);
         $model->set('time', '11:11');
         $model->save();
 
@@ -298,8 +298,7 @@ class ModelWithAuditTraitTest extends TestCase
 
     public function testDateTimeFieldAudit()
     {
-        $persistence = $this->getSqliteTestPersistence();
-        $model = new ModelWithAudit($persistence);
+        $model = new ModelWithAudit($this->db);
         $model->set('datetime', '2020-01-01T11:11:00+00:00');
         $model->save();
 
@@ -312,8 +311,7 @@ class ModelWithAuditTraitTest extends TestCase
 
     public function testDateFieldAudit()
     {
-        $persistence = $this->getSqliteTestPersistence();
-        $model = new ModelWithAudit($persistence);
+        $model = new ModelWithAudit($this->db);
         $model->set('date', '2020-01-01T11:11:00+00:00');
         $model->save();
 
@@ -326,14 +324,13 @@ class ModelWithAuditTraitTest extends TestCase
 
     public function testHasOneAudit()
     {
-        $persistence = $this->getSqliteTestPersistence();
-        $model = new ModelWithAudit($persistence);
+        $model = new ModelWithAudit($this->db);
 
-        $user1 = new User($persistence);
+        $user1 = new User($this->db);
         $user1->set('name', 'Hans');
         $user1->save();
 
-        $user2 = new User($persistence);
+        $user2 = new User($this->db);
         $user2->set('name', 'Peter');
         $user2->save();
 
@@ -380,8 +377,7 @@ class ModelWithAuditTraitTest extends TestCase
 
     public function testValuesFieldAudit()
     {
-        $persistence = $this->getSqliteTestPersistence();
-        $model = new ModelWithAudit($persistence);
+        $model = new ModelWithAudit($this->db);
 
         $model->set('values', 0);
         $model->save();
@@ -426,8 +422,7 @@ class ModelWithAuditTraitTest extends TestCase
 
     public function testDropDownFieldAudit()
     {
-        $persistence = $this->getSqliteTestPersistence();
-        $model = new ModelWithAudit($persistence);
+        $model = new ModelWithAudit($this->db);
 
         $model->set('dropdown', 0);
         $model->save();
@@ -497,8 +492,7 @@ class ModelWithAuditTraitTest extends TestCase
 
     public function testSkipFieldsIfSet()
     {
-        $persistence = $this->getSqliteTestPersistence();
-        $model = new ModelWithAudit($persistence);
+        $model = new ModelWithAudit($this->db);
         $model->set('other_field', 'bla');
         $model->save();
         self::assertSame(
@@ -526,8 +520,7 @@ class ModelWithAuditTraitTest extends TestCase
 
     public function testAuditRendererIsPassed()
     {
-        $persistence = $this->getSqliteTestPersistence();
-        $model = new ModelWithAudit($persistence, ['auditRenderer' => new AuditRendererDemo()]);
+        $model = new ModelWithAudit($this->db, ['auditRenderer' => new AuditRendererDemo()]);
         $model->set('other_field', 'bla');
         $model->save();
 
