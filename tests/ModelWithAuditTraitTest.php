@@ -22,6 +22,7 @@ class ModelWithAuditTraitTest extends TestCase
         $this->createMigrator(new Audit($this->db))->create();
         $this->createMigrator(new ModelWithAudit($this->db))->create();
         $this->createMigrator(new User($this->db))->create();
+        $this->createMigrator(new Email($this->db))->create();
     }
 
     public function testSettingInAppDisablesAudit()

@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "45eeea0adb1a4cdf347fc28abad7fe48",
+    "content-hash": "b8fa3235fdaf365eb929ed2c7594b998",
     "packages": [
         {
             "name": "atk4/core",
@@ -572,21 +572,21 @@
         },
         {
             "name": "philippgrashoff/atkdatamodeltraits",
-            "version": "4.0.1",
+            "version": "4.0.2",
             "source": {
                 "type": "git",
                 "url": "https://github.com/PhilippGrashoff/atkdatamodeltraits.git",
-                "reference": "64c4523d4d9b836ed7f449fb2cc0bba8e222293d"
+                "reference": "a3d42265c3929958b3bd7acdbe220dd13d861336"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/PhilippGrashoff/atkdatamodeltraits/zipball/64c4523d4d9b836ed7f449fb2cc0bba8e222293d",
-                "reference": "64c4523d4d9b836ed7f449fb2cc0bba8e222293d",
+                "url": "https://api.github.com/repos/PhilippGrashoff/atkdatamodeltraits/zipball/a3d42265c3929958b3bd7acdbe220dd13d861336",
+                "reference": "a3d42265c3929958b3bd7acdbe220dd13d861336",
                 "shasum": ""
             },
             "require": {
                 "atk4/data": "4.*",
-                "philippgrashoff/atkextendedtestcase": "4.*"
+                "php": "8.*"
             },
             "require-dev": {
                 "phpstan/phpstan": "1.*",
@@ -595,29 +595,29 @@
             "type": "library",
             "autoload": {
                 "psr-4": {
-                    "atkdatamodeltraits\\": "src"
+                    "PhilippR\\Atk4\\ModelTraits\\": "src"
                 }
             },
             "notification-url": "https://packagist.org/downloads/",
             "description": "A small collection of traits to be used with Atk4\\Data\\Model",
             "support": {
                 "issues": "https://github.com/PhilippGrashoff/atkdatamodeltraits/issues",
-                "source": "https://github.com/PhilippGrashoff/atkdatamodeltraits/tree/4.0.1"
+                "source": "https://github.com/PhilippGrashoff/atkdatamodeltraits/tree/4.0.2"
             },
-            "time": "2023-08-22T15:15:11+00:00"
+            "time": "2023-09-08T14:14:38+00:00"
         },
         {
-            "name": "philippgrashoff/atkextendedtestcase",
-            "version": "4.0.0",
+            "name": "philippgrashoff/secondarymodelforatk",
+            "version": "4.0.1",
             "source": {
                 "type": "git",
-                "url": "https://github.com/PhilippGrashoff/atkextendedtestcase.git",
-                "reference": "61b2cc1c790d72fe69009ec95c6549ec525d5636"
+                "url": "https://github.com/PhilippGrashoff/secondarymodelforatk.git",
+                "reference": "5a62a4c1ef368c7c609f71ba541e451d25e98259"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/PhilippGrashoff/atkextendedtestcase/zipball/61b2cc1c790d72fe69009ec95c6549ec525d5636",
-                "reference": "61b2cc1c790d72fe69009ec95c6549ec525d5636",
+                "url": "https://api.github.com/repos/PhilippGrashoff/secondarymodelforatk/zipball/5a62a4c1ef368c7c609f71ba541e451d25e98259",
+                "reference": "5a62a4c1ef368c7c609f71ba541e451d25e98259",
                 "shasum": ""
             },
             "require": {
@@ -630,51 +630,15 @@
             "type": "library",
             "autoload": {
                 "psr-4": {
-                    "atkextendedtestcase\\": "src"
-                }
-            },
-            "notification-url": "https://packagist.org/downloads/",
-            "description": "TestCase with SQLite persistence",
-            "support": {
-                "issues": "https://github.com/PhilippGrashoff/atkextendedtestcase/issues",
-                "source": "https://github.com/PhilippGrashoff/atkextendedtestcase/tree/4.0.0"
-            },
-            "time": "2023-07-29T19:10:42+00:00"
-        },
-        {
-            "name": "philippgrashoff/secondarymodelforatk",
-            "version": "4.0.0",
-            "source": {
-                "type": "git",
-                "url": "https://github.com/PhilippGrashoff/secondarymodelforatk.git",
-                "reference": "9ee63153e43401950c00c1c3301e35623d206ee2"
-            },
-            "dist": {
-                "type": "zip",
-                "url": "https://api.github.com/repos/PhilippGrashoff/secondarymodelforatk/zipball/9ee63153e43401950c00c1c3301e35623d206ee2",
-                "reference": "9ee63153e43401950c00c1c3301e35623d206ee2",
-                "shasum": ""
-            },
-            "require": {
-                "atk4/data": "4.*",
-                "philippgrashoff/atkextendedtestcase": "4.*"
-            },
-            "require-dev": {
-                "phpstan/phpstan": "1.*",
-                "phpunit/phpunit": "^9.5.5"
-            },
-            "type": "library",
-            "autoload": {
-                "psr-4": {
-                    "secondarymodelforatk\\": "src"
+                    "PhilippR\\Atk4\\SecondaryModel\\": "src"
                 }
             },
             "notification-url": "https://packagist.org/downloads/",
             "support": {
                 "issues": "https://github.com/PhilippGrashoff/secondarymodelforatk/issues",
-                "source": "https://github.com/PhilippGrashoff/secondarymodelforatk/tree/4.0.0"
+                "source": "https://github.com/PhilippGrashoff/secondarymodelforatk/tree/4.0.1"
             },
-            "time": "2023-08-13T07:55:14+00:00"
+            "time": "2023-09-08T13:47:07+00:00"
         },
         {
             "name": "psr/cache",
@@ -844,16 +808,16 @@
         },
         {
             "name": "symfony/polyfill-ctype",
-            "version": "v1.27.0",
+            "version": "v1.28.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/symfony/polyfill-ctype.git",
-                "reference": "5bbc823adecdae860bb64756d639ecfec17b050a"
+                "reference": "ea208ce43cbb04af6867b4fdddb1bdbf84cc28cb"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/symfony/polyfill-ctype/zipball/5bbc823adecdae860bb64756d639ecfec17b050a",
-                "reference": "5bbc823adecdae860bb64756d639ecfec17b050a",
+                "url": "https://api.github.com/repos/symfony/polyfill-ctype/zipball/ea208ce43cbb04af6867b4fdddb1bdbf84cc28cb",
+                "reference": "ea208ce43cbb04af6867b4fdddb1bdbf84cc28cb",
                 "shasum": ""
             },
             "require": {
@@ -868,7 +832,7 @@
             "type": "library",
             "extra": {
                 "branch-alias": {
-                    "dev-main": "1.27-dev"
+                    "dev-main": "1.28-dev"
                 },
                 "thanks": {
                     "name": "symfony/polyfill",
@@ -906,7 +870,7 @@
                 "portable"
             ],
             "support": {
-                "source": "https://github.com/symfony/polyfill-ctype/tree/v1.27.0"
+                "source": "https://github.com/symfony/polyfill-ctype/tree/v1.28.0"
             },
             "funding": [
                 {
@@ -922,20 +886,20 @@
                     "type": "tidelift"
                 }
             ],
-            "time": "2022-11-03T14:55:06+00:00"
+            "time": "2023-01-26T09:26:14+00:00"
         },
         {
             "name": "symfony/polyfill-php80",
-            "version": "v1.27.0",
+            "version": "v1.28.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/symfony/polyfill-php80.git",
-                "reference": "7a6ff3f1959bb01aefccb463a0f2cd3d3d2fd936"
+                "reference": "6caa57379c4aec19c0a12a38b59b26487dcfe4b5"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/symfony/polyfill-php80/zipball/7a6ff3f1959bb01aefccb463a0f2cd3d3d2fd936",
-                "reference": "7a6ff3f1959bb01aefccb463a0f2cd3d3d2fd936",
+                "url": "https://api.github.com/repos/symfony/polyfill-php80/zipball/6caa57379c4aec19c0a12a38b59b26487dcfe4b5",
+                "reference": "6caa57379c4aec19c0a12a38b59b26487dcfe4b5",
                 "shasum": ""
             },
             "require": {
@@ -944,7 +908,7 @@
             "type": "library",
             "extra": {
                 "branch-alias": {
-                    "dev-main": "1.27-dev"
+                    "dev-main": "1.28-dev"
                 },
                 "thanks": {
                     "name": "symfony/polyfill",
@@ -989,7 +953,7 @@
                 "shim"
             ],
             "support": {
-                "source": "https://github.com/symfony/polyfill-php80/tree/v1.27.0"
+                "source": "https://github.com/symfony/polyfill-php80/tree/v1.28.0"
             },
             "funding": [
                 {
@@ -1005,20 +969,20 @@
                     "type": "tidelift"
                 }
             ],
-            "time": "2022-11-03T14:55:06+00:00"
+            "time": "2023-01-26T09:26:14+00:00"
         },
         {
             "name": "symfony/polyfill-php81",
-            "version": "v1.27.0",
+            "version": "v1.28.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/symfony/polyfill-php81.git",
-                "reference": "707403074c8ea6e2edaf8794b0157a0bfa52157a"
+                "reference": "7581cd600fa9fd681b797d00b02f068e2f13263b"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/symfony/polyfill-php81/zipball/707403074c8ea6e2edaf8794b0157a0bfa52157a",
-                "reference": "707403074c8ea6e2edaf8794b0157a0bfa52157a",
+                "url": "https://api.github.com/repos/symfony/polyfill-php81/zipball/7581cd600fa9fd681b797d00b02f068e2f13263b",
+                "reference": "7581cd600fa9fd681b797d00b02f068e2f13263b",
                 "shasum": ""
             },
             "require": {
@@ -1027,7 +991,7 @@
             "type": "library",
             "extra": {
                 "branch-alias": {
-                    "dev-main": "1.27-dev"
+                    "dev-main": "1.28-dev"
                 },
                 "thanks": {
                     "name": "symfony/polyfill",
@@ -1068,7 +1032,7 @@
                 "shim"
             ],
             "support": {
-                "source": "https://github.com/symfony/polyfill-php81/tree/v1.27.0"
+                "source": "https://github.com/symfony/polyfill-php81/tree/v1.28.0"
             },
             "funding": [
                 {
@@ -1084,20 +1048,20 @@
                     "type": "tidelift"
                 }
             ],
-            "time": "2022-11-03T14:55:06+00:00"
+            "time": "2023-01-26T09:26:14+00:00"
         },
         {
             "name": "symfony/polyfill-php82",
-            "version": "v1.27.0",
+            "version": "v1.28.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/symfony/polyfill-php82.git",
-                "reference": "80ddf7bfa17ef7b06db4e6d007a95bf584e07b44"
+                "reference": "7716bea9c86776fb3362d6b52fe1fc9471056a49"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/symfony/polyfill-php82/zipball/80ddf7bfa17ef7b06db4e6d007a95bf584e07b44",
-                "reference": "80ddf7bfa17ef7b06db4e6d007a95bf584e07b44",
+                "url": "https://api.github.com/repos/symfony/polyfill-php82/zipball/7716bea9c86776fb3362d6b52fe1fc9471056a49",
+                "reference": "7716bea9c86776fb3362d6b52fe1fc9471056a49",
                 "shasum": ""
             },
             "require": {
@@ -1106,7 +1070,7 @@
             "type": "library",
             "extra": {
                 "branch-alias": {
-                    "dev-main": "1.27-dev"
+                    "dev-main": "1.28-dev"
                 },
                 "thanks": {
                     "name": "symfony/polyfill",
@@ -1147,7 +1111,7 @@
                 "shim"
             ],
             "support": {
-                "source": "https://github.com/symfony/polyfill-php82/tree/v1.27.0"
+                "source": "https://github.com/symfony/polyfill-php82/tree/v1.28.0"
             },
             "funding": [
                 {
@@ -1163,7 +1127,7 @@
                     "type": "tidelift"
                 }
             ],
-            "time": "2022-11-10T10:10:54+00:00"
+            "time": "2023-08-25T17:27:25+00:00"
         },
         {
             "name": "symfony/yaml",
@@ -1537,16 +1501,16 @@
         },
         {
             "name": "phpstan/phpstan",
-            "version": "1.10.30",
+            "version": "1.10.33",
             "source": {
                 "type": "git",
                 "url": "https://github.com/phpstan/phpstan.git",
-                "reference": "2910afdd3fe33e5afd71c09f3fb0d0845b48c410"
+                "reference": "03b1cf9f814ba0863c4e9affea49a4d1ed9a2ed1"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/phpstan/phpstan/zipball/2910afdd3fe33e5afd71c09f3fb0d0845b48c410",
-                "reference": "2910afdd3fe33e5afd71c09f3fb0d0845b48c410",
+                "url": "https://api.github.com/repos/phpstan/phpstan/zipball/03b1cf9f814ba0863c4e9affea49a4d1ed9a2ed1",
+                "reference": "03b1cf9f814ba0863c4e9affea49a4d1ed9a2ed1",
                 "shasum": ""
             },
             "require": {
@@ -1595,7 +1559,7 @@
                     "type": "tidelift"
                 }
             ],
-            "time": "2023-08-22T13:48:25+00:00"
+            "time": "2023-09-04T12:20:53+00:00"
         },
         {
             "name": "phpunit/php-code-coverage",

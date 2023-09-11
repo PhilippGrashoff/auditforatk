@@ -6,12 +6,12 @@ namespace PhilippR\Atk4\Audit\Tests\Testclasses;
 
 use Atk4\Data\Model;
 use Atk4\Ui\Dropdown;
-use PhilippR\Atk4\Audit\ModelWithAuditTrait;
+use PhilippR\Atk4\Audit\AuditTrait;
 
 class ModelWithAudit extends Model
 {
 
-    use ModelWithAuditTrait;
+    use AuditTrait;
 
     public $table = 'model_with_audit';
 

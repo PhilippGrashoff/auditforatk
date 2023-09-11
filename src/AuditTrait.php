@@ -4,16 +4,16 @@ declare(strict_types=1);
 
 namespace PhilippR\Atk4\Audit;
 
+use Atk4\Core\Exception;
 use Atk4\Data\Model;
 use Atk4\Data\Reference;
 use Atk4\Data\Reference\HasOne;
 use ReflectionClass;
-use secondarymodelforatk\SecondaryModel;
 
 /**
  * @extends Model<Model>
  */
-trait ModelWithAuditTrait
+trait AuditTrait
 {
 
     protected array $dirtyBeforeSave = [];
@@ -56,15 +56,15 @@ trait ModelWithAuditTrait
         //after delete, create Audit
         $this->onHook(
             Model::HOOK_AFTER_DELETE,
-            function (self $model) {
-                $model->createDeleteAudit();
+            function (self $entity) {
+                $entity->createDeleteAudit();
             }
         );
 
         $this->onHook(
             Model::HOOK_BEFORE_SAVE,
-            function (self $model) {
-                $model->dirtyBeforeSave = $model->dirty;
+            function (self $entity) {
+                $entity->dirtyBeforeSave = $entity->getDirtyRef();
             },
             [],
             999
@@ -78,7 +78,7 @@ trait ModelWithAuditTrait
      *
      * @param string $type
      * @return void
-     * @throws \Atk4\Core\Exception
+     * @throws Exception
      * @throws \Atk4\Data\Exception
      */
     public function createAudit(string $type): void
@@ -88,7 +88,7 @@ trait ModelWithAuditTrait
         }
 
         if ($type == 'CREATE') {
-            $audit = new Audit($this->persistence, ['parentObject' => $this, 'auditRenderer' => $this->auditRenderer]);
+            $audit = new Audit($this->getPersistence(), ['parentObject' => $this, 'auditRenderer' => $this->auditRenderer]);
             $audit->set('value', $type);
             $audit->save();
             $type = 'CHANGE';
@@ -100,7 +100,7 @@ trait ModelWithAuditTrait
         }
 
         if ($type == 'CREATE' || $data) {
-            $audit = new Audit($this->persistence, ['parentObject' => $this, 'auditRenderer' => $this->auditRenderer]);
+            $audit = new Audit($this->getPersistence(), ['parentObject' => $this, 'auditRenderer' => $this->auditRenderer]);
             $audit->set('value', $type);
             $audit->set('data', $data);
             $audit->save();
@@ -177,7 +177,7 @@ trait ModelWithAuditTrait
         if (!$this->_checkSkipAudit()) {
             return;
         }
-        $audit = new Audit($this->persistence, ['parentObject' => $this, 'auditRenderer' => $this->auditRenderer]);
+        $audit = new Audit($this->getPersistence(), ['parentObject' => $this, 'auditRenderer' => $this->auditRenderer]);
         $audit->set('value', 'DELETE');
         $audit->save();
     }
@@ -202,7 +202,7 @@ trait ModelWithAuditTrait
         if (!$this->_checkSkipAudit()) {
             return;
         }
-        $audit = new Audit($this->persistence, ['parentObject' => $this, 'auditRenderer' => $this->auditRenderer]);
+        $audit = new Audit($this->getPersistence(), ['parentObject' => $this, 'auditRenderer' => $this->auditRenderer]);
         //TODO: Why shortname? store full, easier, cant lead to unintended errors
         //In general, ADD_SECONDARY and storing the class name in data array is more sensible!
         $audit->set('value', $type . '_' . strtoupper((new ReflectionClass($model))->getShortName()));
@@ -237,7 +237,7 @@ trait ModelWithAuditTrait
             return;
         }
 
-        $audit = new Audit($this->persistence, ['parentObject' => $this, 'auditRenderer' => $this->auditRenderer]);
+        $audit = new Audit($this->getPersistence(), ['parentObject' => $this, 'auditRenderer' => $this->auditRenderer]);
         //TODO: Why shortname? store full, easier, cant lead to unintended errors
         //In general, ADD_MTOM and storing the class name in data array is more sensible!
         $audit->set('value', $type . '_' . strtoupper((new ReflectionClass($model))->getShortName()));
@@ -263,7 +263,7 @@ trait ModelWithAuditTrait
         if (!$this->_checkSkipAudit()) {
             return;
         }
-        $audit = new Audit($this->persistence, ['parentObject' => $this, 'auditRenderer' => $this->auditRenderer]);
+        $audit = new Audit($this->getPersistence(), ['parentObject' => $this, 'auditRenderer' => $this->auditRenderer]);
         $audit->set('value', $type);
         $audit->set('data', $data);
         $audit->save();
@@ -369,8 +369,8 @@ trait ModelWithAuditTrait
     {
         //add possibility to skip auditing App-wide, e.g. to speed up tests
         if (
-            isset($this->persistence->app->createAudit)
-            && !$this->persistence->app->createAudit
+            isset($this->getPersistence()->app->createAudit)
+            && !$this->getPersistence()->app->createAudit
         ) {
             return false;
         }
