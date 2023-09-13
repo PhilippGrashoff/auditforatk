@@ -40,18 +40,19 @@ class Audit extends SecondaryModel
             ['type' => 'string']
         );
 
-        //If it's an Audit for a field, the old field value is stored in here
+        //If it's an Audit for a field, the old field value is stored in here.
+        //the new value is stored in "value" field inherited from SecondaryModel.
         $this->addField(
             'old_value',
             ['type' => 'string']
         );
 
-        //If it's an Audit for a field, the new field value is stored in here.
+        /*//If it's an Audit for a field, the new field value is stored in here.
         //If it's another audit type, custom values are stored in here
         $this->addField(
             'value',
             ['type' => 'string']
-        );
+        );*/
 
         //store the name of the logged-in user - stored for performance in case rendered_output must be recalculated.
         $this->addField(

@@ -4,7 +4,8 @@ declare(strict_types=1);
 
 namespace PhilippR\Atk4\Audit\Tests\Testclasses;
 
-use secondarymodelforatk\SecondaryModel;
+
+use PhilippR\Atk4\SecondaryModel\SecondaryModel;
 
 class Email extends SecondaryModel
 {

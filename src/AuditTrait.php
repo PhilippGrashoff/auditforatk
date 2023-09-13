@@ -8,6 +8,7 @@ use Atk4\Core\Exception;
 use Atk4\Data\Model;
 use Atk4\Data\Reference;
 use Atk4\Data\Reference\HasOne;
+use PhilippR\Atk4\SecondaryModel\SecondaryModel;
 use ReflectionClass;
 
 /**
@@ -15,19 +16,33 @@ use ReflectionClass;
  */
 trait AuditTrait
 {
-
-    protected array $dirtyBeforeSave = [];
-
-    protected array $skipFieldsFromAudit = [];
-
-    protected AuditRendererInterface $auditRenderer;
-
-    //possibility to disable Audit, e.g. if a base class has audit but some extended class shouldn't
+    /**
+     * @var bool
+     * possibility to completely disable Audit, e.g. if a base class has audit but some extended class shouldn't.
+     */
     protected bool $noAudit = false;
 
+    /**
+     * @var array<string, mixed>
+     * in here, the fields which were dirty before save are stored to create the audit after save.
+     */
+    protected array $dirtyBeforeSave = [];
 
     /**
-     * use in Model::init() to quickly set up reference and hooks
+     * @var array<int, string>
+     * A list of field names that should be excluded from audit
+     */
+    protected array $skipFieldsFromAudit = [];
+
+    /**
+     * @var AuditRendererInterface Used to create a human-readable string for each audit. Implement your own to create
+     * strings in your desired format.
+     */
+    protected AuditRendererInterface $auditRenderer;
+
+    /**
+     * add this method to Model::init() to quickly set up reference and hooks
+     * @return Reference
      */
     protected function addAuditRefAndAuditHooks(): Reference
     {
@@ -35,21 +50,18 @@ trait AuditTrait
             Audit::class,
             [
                 'model' => function () {
-                    return (new Audit(
-                        $this->getPersistence(),
-                        ['parentObject' => $this, 'auditRenderer' => $this->auditRenderer]
-                    ))
+                    return (new Audit($this->getPersistence(), ['auditRenderer' => $this->auditRenderer]))
                         ->addCondition('model_class', get_class($this));
                 },
                 'theirField' => 'model_id'
             ]
         );
 
-        //after save, create Audit
+        //after each save, create Audit
         $this->onHook(
             Model::HOOK_AFTER_SAVE,
-            function (self $model, bool $isUpdate) {
-                $model->createAudit($isUpdate ? 'CHANGE' : 'CREATE');
+            function (self $entity, bool $isUpdate) {
+                $entity->createAudit($isUpdate ? 'CHANGE' : 'CREATE');
             }
         );
 
@@ -61,10 +73,12 @@ trait AuditTrait
             }
         );
 
+        //save which fields were dirty before save to have them available after save when audit is created
+        //todo: check if his is still needed in atk4/data v4
         $this->onHook(
             Model::HOOK_BEFORE_SAVE,
             function (self $entity) {
-                $entity->dirtyBeforeSave = $entity->getDirtyRef();
+                $entity->dirtyBeforeSave = clone $entity->getDirtyRef();
             },
             [],
             999
@@ -83,44 +97,38 @@ trait AuditTrait
      */
     public function createAudit(string $type): void
     {
-        if (!$this->_checkSkipAudit()) {
+        if ($this->noAudit()) {
             return;
         }
-
-        if ($type == 'CREATE') {
-            $audit = new Audit($this->getPersistence(), ['parentObject' => $this, 'auditRenderer' => $this->auditRenderer]);
+        //create a single audit just indicating that the record was created
+        if ($type === 'CREATE') {
+            $audit = new Audit(
+                $this->getPersistence(),
+                ['auditRenderer' => $this->auditRenderer]
+            );
             $audit->set('value', $type);
             $audit->save();
-            $type = 'CHANGE';
         }
-
-        $data = [];
         foreach ($this->dirtyBeforeSave as $fieldName => $dirtyValue) {
-            $this->_addFieldToAudit($data, $fieldName, $dirtyValue);
-        }
-
-        if ($type == 'CREATE' || $data) {
-            $audit = new Audit($this->getPersistence(), ['parentObject' => $this, 'auditRenderer' => $this->auditRenderer]);
-            $audit->set('value', $type);
-            $audit->set('data', $data);
-            $audit->save();
+            $this->addFieldAudit($fieldName, $dirtyValue);
         }
     }
 
     /**
-     * @param array $data
      * @param string $fieldName
      * @param $dirtyValue
      * @return void
+     * @throws Exception
+     * @throws \Atk4\Data\Exception
      */
-    protected function _addFieldToAudit(array &$data, string $fieldName, $dirtyValue): void
+    protected function addFieldAudit(string $fieldName, $dirtyValue): void
     {
         //only audit non system fields and fields that go to persistence
         if (
             in_array($fieldName, $this->skipFieldsFromAudit)
             || !$this->hasField($fieldName)
-            || $fieldName === $this->id_field
-            || $this->getField($fieldName)->never_persist
+            || $fieldName === $this->idField
+            || $this->getField($fieldName)->neverersist
         ) {
             return;
         }
@@ -128,13 +136,14 @@ trait AuditTrait
         if ($dirtyValue === $this->get($fieldName)) {
             return;
         }
+        /*
         //strings special treatment; money due to GermanMoneyFormatFieldTrait
         if (
             in_array($this->getField($fieldName)->type, [null, 'string', 'text', 'money'])
             && $dirtyValue == $this->get($fieldName)
         ) {
             return;
-        }
+        }*/
 
         //time fields
         if ($this->getField($fieldName)->type === 'time') {
@@ -174,7 +183,7 @@ trait AuditTrait
      */
     public function createDeleteAudit(): void
     {
-        if (!$this->_checkSkipAudit()) {
+        if (!$this->noAudit()) {
             return;
         }
         $audit = new Audit($this->getPersistence(), ['parentObject' => $this, 'auditRenderer' => $this->auditRenderer]);
@@ -199,7 +208,7 @@ trait AuditTrait
         string $modelClass = null,
         $modelId = null
     ): void {
-        if (!$this->_checkSkipAudit()) {
+        if (!$this->noAudit()) {
             return;
         }
         $audit = new Audit($this->getPersistence(), ['parentObject' => $this, 'auditRenderer' => $this->auditRenderer]);
@@ -233,7 +242,7 @@ trait AuditTrait
      */
     public function addMToMAudit(string $type, Model $model, string $fieldName = 'name'): void
     {
-        if (!$this->_checkSkipAudit()) {
+        if (!$this->noAudit()) {
             return;
         }
 
@@ -256,11 +265,11 @@ trait AuditTrait
      * @param string $type
      * @param array $data
      * @return void
-     * Adds an additional audit entry which is not related to one of the model's fields
+     * Adds an audit entry which is not related to one of the model's fields
      */
     public function addAdditionalAudit(string $type, array $data)
     {
-        if (!$this->_checkSkipAudit()) {
+        if (!$this->noAudit()) {
             return;
         }
         $audit = new Audit($this->getPersistence(), ['parentObject' => $this, 'auditRenderer' => $this->auditRenderer]);
@@ -320,7 +329,7 @@ trait AuditTrait
     }
 
     /**
-     * used to create a array containing the audit data for a one to many relation field
+     * used to create an array containing the audit data for a one-to-many relation field
      */
     private function _hasOneAudit(string $fieldName, $dirtyValue): array
     {
@@ -365,17 +374,14 @@ trait AuditTrait
         ];
     }
 
-    protected function _checkSkipAudit(): bool
+    protected function noAudit(): bool
     {
-        //add possibility to skip auditing App-wide, e.g. to speed up tests
-        if (
-            isset($this->getPersistence()->app->createAudit)
-            && !$this->getPersistence()->app->createAudit
-        ) {
+        //add possibility to skip auditing in ENV, e.g. to speed up tests
+        if (isset($_ENV['noAudit']) && $_ENV['noAudit']) {
             return false;
         }
 
-        if($this->noAudit) {
+        if ($this->noAudit) {
             return false;
         }
 
