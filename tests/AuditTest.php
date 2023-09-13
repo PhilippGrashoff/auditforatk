@@ -6,7 +6,6 @@ use Atk4\Data\Persistence;
 use Atk4\Data\Persistence\Sql;
 use Atk4\Data\Schema\TestCase;
 use PhilippR\Atk4\Audit\Audit;
-use PhilippR\Atk4\Audit\Tests\Testclasses\AppWithAuditSetting;
 use PhilippR\Atk4\Audit\Tests\Testclasses\AuditRendererDemo;
 use PhilippR\Atk4\Audit\Tests\Testclasses\User;
 

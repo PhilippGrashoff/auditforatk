@@ -33,19 +33,6 @@ class ModelWithAudit extends Model
                 'values' => [0 => 'SomeValue', 1 => 'SomeOtherValue']
             ]
         );
-        $this->addField(
-            'dropdown',
-            [
-                'caption' => 'DropDownTest',
-                'ui' => [
-                    'form' => [
-                        Dropdown::class,
-                        'values' => [0 => 'SomeValue', 1 => 'SomeOtherValue'],
-                        'empty' => ''
-                    ]
-                ]
-            ]
-        );
 
         $this->hasOne('user_id', ['model' => [User::class], 'caption' => 'Benutzer']);
     }

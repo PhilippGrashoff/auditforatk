@@ -16,5 +16,6 @@ class Email extends SecondaryModel
     {
         parent::init();
         $this->addField('name');
+        $this->addField('value');
     }
 }

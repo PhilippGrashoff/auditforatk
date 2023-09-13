@@ -12,7 +12,7 @@ use PhilippR\Atk4\Audit\Tests\Testclasses\ModelWithAudit;
 use PhilippR\Atk4\Audit\Tests\Testclasses\User;
 
 
-class ModelWithAuditTraitTest extends TestCase
+class AuditTraitTest extends TestCase
 {
 
     protected function setUp(): void
