@@ -19,10 +19,6 @@ class Audit extends SecondaryModel
 
     protected ?AuditRendererInterface $auditRenderer = null;
 
-    //no need to reload audit records
-    public bool $reloadAfterSave = false;
-
-
     /**
      * @return void
      * @throws Exception
@@ -32,33 +28,25 @@ class Audit extends SecondaryModel
     {
         parent::init();
 
+        //add created date field and hook to automatically set value.
         $this->addCreatedDateFieldAndHook();
 
-        //the type of the audit. "FIELD" if a model's field value was changed, other types if it's some other audit
+        //the type of the audit, can be freely defined.
+        // "FIELD" if a model's field value was changed,
+        // "CREATED" if a model record was created,
+        // "DELETED" if a model record was deleted,
+        // other types if it's some other audit
+        $this->addField('type');
+
+        //In this field all relevant data to calculate rendered_output is stored. In case of a field audit, it is
+        //fieldName, oldValue and newValue,
         $this->addField(
-            'type',
-            ['type' => 'string']
+            'data',
+            ['type' => 'json']
         );
 
-        //If it's an Audit for a field, the old field value is stored in here.
-        //the new value is stored in "value" field inherited from SecondaryModel.
-        $this->addField(
-            'old_value',
-            ['type' => 'string']
-        );
-
-        /*//If it's an Audit for a field, the new field value is stored in here.
-        //If it's another audit type, custom values are stored in here
-        $this->addField(
-            'value',
-            ['type' => 'string']
-        );*/
-
-        //store the name of the logged-in user - stored for performance in case rendered_output must be recalculated.
-        $this->addField(
-            'created_by_name',
-            ['type' => 'string']
-        );
+        //store the name of the logged-in user - stored directly for performance and in case users are deleted.
+        $this->addField('created_by_name');
 
         //A text saying what change is audited in this entity. Rendered by $this->auditRenderer.
         // E.g. 2023-05-22 12:55 Some User changed some_field from "some old value" to "some_new_value"
