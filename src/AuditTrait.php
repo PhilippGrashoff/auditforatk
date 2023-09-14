@@ -6,8 +6,6 @@ namespace PhilippR\Atk4\Audit;
 
 use Atk4\Data\Model;
 use Atk4\Data\Reference;
-use PhilippR\Atk4\SecondaryModel\SecondaryModel;
-use ReflectionClass;
 
 /**
  * @extends Model<Model>
@@ -23,7 +21,6 @@ trait AuditTrait
     /**
      * @var array<string, mixed>
      * in here, the fields which were dirty before save are stored to create the audit after save.
-     * Remove once https://github.com/atk4/data/issues/1130 is fixed
      */
     public array $dirtyBeforeSave = [];
 
@@ -43,7 +40,7 @@ trait AuditTrait
             Audit::class,
             [
                 'model' => function () {
-                    return (new Audit($this->getPersistence(), ['auditRenderer' => $this->auditRenderer]))
+                    return (new Audit($this->getPersistence()))
                         ->addCondition('model_class', get_class($this));
                 },
                 'theirField' => 'model_id'
@@ -51,7 +48,6 @@ trait AuditTrait
         );
 
         //save which fields were dirty before save to have them available after save when audit is created
-        // Remove once https://github.com/atk4/data/issues/1130 is fixed
         $this->onHook(
             Model::HOOK_BEFORE_SAVE,
             function (self $entity) {

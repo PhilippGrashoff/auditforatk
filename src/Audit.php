@@ -37,20 +37,19 @@ class Audit extends SecondaryModel
 
         //In this field all relevant data to calculate rendered_output is stored. In case of a field audit, it is
         //fieldName, oldValue and newValue,
-        $this->addField(
-            'data',
-            ['type' => 'json']
-        );
+        $this->addField('data', ['type' => 'json']);
+
+        //save the user ID for re-rendering
+        $this->addField('user_id');
 
         //store the name of the logged-in user - stored directly for performance and in case users are deleted.
-        $this->addField('created_by_name');
+        $this->addField('user_name');
 
-        //A text saying what change is audited in this entity. Rendered by $this->auditRenderer.
-        // E.g. 2023-05-22 12:55 Some User changed some_field from "some old value" to "some_new_value"
-        $this->addField(
-            'rendered_output',
-            ['type' => 'text']
-        );
+        //A text saying what change is audited in this entity. Rendered by a MessageRenderer instance.
+        //e.g. changed some_field from "some old value" to "some_new_value"
+        //for rendering, the username and the date are usually pulled from the according fields, but
+        //you can also put it in here if you please.
+        $this->addField('rendered_message', ['type' => 'text']);
 
         //newest Audits go first
         $this->setOrder(['created_date' => 'desc']);

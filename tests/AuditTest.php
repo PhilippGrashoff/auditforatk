@@ -40,15 +40,4 @@ class AuditTest extends TestCase
             'Demo'
         );
     }
-
-    protected function getPersistence(): Persistence
-    {
-        $this->db->app = new AppWithAuditSetting();
-        $this->db->app->auth = new \stdClass();
-        $this->db->app->auth->user = new User($this->db);
-        $this->db->app->auth->user->set('name', 'SOME NAME');
-        $this->db->app->auth->user->save();
-
-        return $this->db;
-    }
 }

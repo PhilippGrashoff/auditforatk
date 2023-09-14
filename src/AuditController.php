@@ -95,34 +95,35 @@ class AuditController
      * @throws Exception
      * @throws \Atk4\Data\Exception
      */
-    protected function addFieldAudit(Model $entity, string $fieldName, mixed $dirtyValue): void
+    protected function addFieldChangedAudit(Model $entity, string $fieldName, mixed $dirtyValue): void
     {
         //hasOne references
         if (
             $entity->hasReference($fieldName)
             && $entity->getReference($fieldName) instanceof HasOne
         ) {
-            $this->_hasOneAudit($entity, $fieldName, $dirtyValue);
+            $this->hasOneAudit($entity, $fieldName, $dirtyValue);
         } //fields with key-value lists
         elseif (
             is_array($entity->getField($fieldName)->values)
             && count($entity->getField($fieldName)->values) > 0
         ) {
-            $this->_keyValueAudit($entity, $fieldName, $dirtyValue);
+            $this->keyValueAudit($entity, $fieldName, $dirtyValue);
         } //any other field
         else {
-            $this->_normalFieldAudit($entity, $fieldName, $dirtyValue);
+            $this->normalFieldAudit($entity, $fieldName, $dirtyValue);
         }
     }
 
     /**
      *  used to create an array containing the audit data for a normal field
      */
-    protected function _normalFieldAudit(Model $entity, string $fieldName, mixed $dirtyValue): Audit
+    protected function normalFieldAudit(Model $entity, string $fieldName, mixed $dirtyValue): Audit
     {
         $audit = $this->getAuditForEntity($entity);
         $audit->set('type', 'FIELD');
         $audit->set('data', [
+            'fieldType' => $entity->getField($fieldName)->type,
             'fieldName' => $entity->getField($fieldName)->getCaption(),
             'oldValue' => $dirtyValue,
             'newValue' => $entity->get($fieldName),
@@ -136,29 +137,17 @@ class AuditController
     /**
      * used to create an array containing the audit data for a one-to-many relation field
      */
-    protected function _hasOneAudit(Model $entity, string $fieldName, $dirtyValue): Audit
+    protected function hasOneAudit(Model $entity, string $fieldName, $dirtyValue): Audit
     {
         $audit = $this->getAuditForEntity($entity);
         $audit->set('type', 'FIELD_HASONE');
-
-        $oldValue = null;
-        if ($dirtyValue) {
-            $oldEntity = $entity->refModel($fieldName);
-            $oldEntity->onlyFields = [$oldEntity->idField, $oldEntity->titleField];
-            $oldEntity->load($dirtyValue);
-            $oldValue = [$oldEntity->getId() => $oldEntity->getTitle()];
-        }
-
-        $newEntity = $entity->refModel($fieldName);
-        $newEntity->onlyFields = [$newEntity->idField, $newEntity->titleField];
-        $newEntity->load($entity->get($fieldName));
 
         $audit->set(
             'data',
             [
                 'fieldName' => $entity->getField($fieldName)->getCaption(),
-                'oldValue' => $oldValue,
-                'newValue' => [$newEntity->getId() => $newEntity->getTitle()]
+                'oldValue' => $dirtyValue,
+                'newValue' => [$entity->get($fieldName)]
             ]
         );
 
@@ -168,7 +157,7 @@ class AuditController
         return $audit;
     }
 
-    protected function _keyValueAudit(Model $entity, string $fieldName, $dirtyValue): Audit
+    protected function keyValueAudit(Model $entity, string $fieldName, $dirtyValue): Audit
     {
         $audit = $this->getAuditForEntity($entity);
         $audit->set('type', 'FIELD');
@@ -207,16 +196,16 @@ class AuditController
         return true;
     }
 
-    // add Name of currently logged-in user to "created_by_name" field
     protected function getAuditForEntity(Model $entity): Audit
     {
         $audit = new Audit($entity->getPersistence());
         $audit->setParentEntity($entity);
         if (
             isset($entity->persistence->app->auth->user)
-            && $entity->persistence->app->auth->user->loaded()
+            && $entity->persistence->app->auth->user->isLoaded()
         ) {
-            $audit->set('created_by_name', $entity->persistence->app->auth->user->get('name'));
+            $audit->set('user_name', $entity->persistence->app->auth->user->getTitle());
+            $audit->set('user_id', $entity->persistence->app->auth->user->getId());
         }
 
         return $audit;
