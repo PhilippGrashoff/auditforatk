@@ -2,7 +2,6 @@
 
 namespace PhilippR\Atk4\Audit\Tests;
 
-use Atk4\Data\Persistence;
 use Atk4\Data\Persistence\Sql;
 use Atk4\Data\Schema\TestCase;
 use PhilippR\Atk4\Audit\Audit;
@@ -10,7 +9,7 @@ use PhilippR\Atk4\Audit\Tests\Testclasses\AuditRendererDemo;
 use PhilippR\Atk4\Audit\Tests\Testclasses\User;
 
 
-class AuditTest extends TestCase
+class MessageRendererTest extends TestCase
 {
 
     protected function setUp(): void

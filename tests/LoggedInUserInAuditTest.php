@@ -2,17 +2,16 @@
 
 namespace PhilippR\Atk4\Audit\Tests;
 
+use Atk4\Data\Persistence;
 use Atk4\Data\Persistence\Sql;
 use Atk4\Data\Schema\TestCase;
 use PhilippR\Atk4\Audit\Audit;
-use PhilippR\Atk4\Audit\Tests\Testclasses\AppWithAuditSetting;
-use PhilippR\Atk4\Audit\Tests\Testclasses\AuditRendererDemo;
 use PhilippR\Atk4\Audit\Tests\Testclasses\Email;
 use PhilippR\Atk4\Audit\Tests\Testclasses\ModelWithAudit;
 use PhilippR\Atk4\Audit\Tests\Testclasses\User;
 
 
-class AuditTraitTest extends TestCase
+class LoggedInUserInAuditTest extends TestCase
 {
 
     protected function setUp(): void
@@ -519,17 +518,14 @@ class AuditTraitTest extends TestCase
         );
     }
 
-    public function testAuditRendererIsPassed()
+    protected function getPersistence(): Persistence
     {
-        $model = new ModelWithAudit($this->db, ['auditRenderer' => new AuditRendererDemo()]);
-        $model->set('other_field', 'bla');
-        $model->save();
+        $this->db->app = new \stdClass();
+        $this->db->app->auth = new \stdClass();
+        $this->db->app->auth->user = new User($this->db);
+        $this->db->app->auth->user->set('name', 'SOME NAME');
+        $this->db->app->auth->user->save();
 
-        $audit = $model->getAuditViewModel();
-        $audit->loadAny();
-        self::assertSame(
-            "Demo",
-            $audit->get('rendered_output')
-        );
+        return $this->db;
     }
 }
