@@ -5,9 +5,7 @@ namespace PhilippR\Atk4\Audit\Tests;
 use Atk4\Data\Persistence\Sql;
 use Atk4\Data\Schema\TestCase;
 use PhilippR\Atk4\Audit\Audit;
-use PhilippR\Atk4\Audit\Tests\Testclasses\AuditRendererDemo;
-use PhilippR\Atk4\Audit\Tests\Testclasses\User;
-
+use PhilippR\Atk4\Audit\Tests\Testclasses\ModelWithAudit;
 
 class SkipFieldsAndNoAuditTest extends TestCase
 {
@@ -17,26 +15,68 @@ class SkipFieldsAndNoAuditTest extends TestCase
         parent::setUp();
         $this->db = new Sql('sqlite::memory:');
         $this->createMigrator(new Audit($this->db))->create();
-        $this->createMigrator(new User($this->db))->create();
+        $this->createMigrator(new ModelWithAudit($this->db))->create();
     }
 
-    public function testUserInfoOnSave()
+    public function testIdFieldIsIgnored(): void
     {
-        $audit = new Audit($this->getPersistence());
-        $audit->save();
-        self::assertEquals(
-            $audit->get('created_by_name'),
-            'SOME NAME'
+        $entity = (new ModelWithAudit($this->db))->createEntity();
+        $entity->save();
+        self::assertSame(
+            1,
+            (int)$entity->ref(Audit::class)->action('count')->getOne()
+        );
+        self::assertSame(
+            "CREATED",
+            $entity->ref(Audit::class)->loadAny()->get('type')
         );
     }
 
-    public function testAuditMessageRendererIsUsed()
+    public function testNeverPersistFieldsAreNotAudited(): void
     {
-        $audit = new Audit($this->getPersistence(), ['auditRenderer' => new AuditRendererDemo()]);
-        $audit->save();
-        self::assertEquals(
-            $audit->get('rendered_output'),
-            'Demo'
+        $entity = (new ModelWithAudit($this->db))->createEntity();
+        $entity->save();
+        self::assertSame(
+            1,
+            (int)$entity->ref(Audit::class)->action('count')->getOne()
+        );
+
+        $entity->set('never_persist', 'Some');
+        $entity->save();
+        $entity->set('never_persist', 'Another');
+        $entity->save();
+
+        self::assertSame(
+            1,
+            (int)$entity->ref(Audit::class)->action('count')->getOne()
+        );
+    }
+
+    public function testSkippedFieldsAreNotAudited(): void
+    {
+        $entity = (new ModelWithAudit($this->db))->createEntity();
+        $entity->set('other_field', 'bla');
+        $entity->save();
+        self::assertSame(
+            2,
+            (int)$entity->ref(Audit::class)->action('count')->getOne()
+        );
+
+        //now disable audit for that field
+        $entity->setSkipFields(['other_field']);
+        $entity->set('other_field', 'du');
+        $entity->save();
+        self::assertSame(
+            2,
+            (int)$entity->ref(Audit::class)->action('count')->getOne()
+        );
+        //re-enable, audit should be created
+        $entity->setSkipFields(['name']);
+        $entity->set('other_field', 'kra');
+        $entity->save();
+        self::assertSame(
+            3,
+            (int)$entity->ref(Audit::class)->action('count')->getOne()
         );
     }
 }

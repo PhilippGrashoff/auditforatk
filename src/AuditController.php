@@ -33,6 +33,8 @@ class AuditController
         if ($this->noAudit()) {
             return;
         }
+
+        $entity->assertIsEntity();
         $audit = $this->getAuditForEntity($entity);
         $audit->set('type', 'CREATED');
         $audit->set('rendered_message', $this->messageRenderer->renderCreatedMessage($audit, $entity));
@@ -59,7 +61,7 @@ class AuditController
     /**
      *  Save any change in Model Fields to Audit
      *
-     * @param Model $entity
+     * @param Model<Model|AuditTrait> $entity
      * @return void
      * @throws Exception
      * @throws \Atk4\Data\Exception
@@ -83,7 +85,7 @@ class AuditController
             if ($dirtyValue === $entity->get($fieldName)) {
                 continue;
             }
-            $entity->addFieldAudit($entity, $fieldName, $dirtyValue);
+            $this->addFieldChangedAudit($entity, $fieldName, $dirtyValue);
         }
     }
 
@@ -190,22 +192,24 @@ class AuditController
     {
         //add possibility to skip auditing in ENV, e.g. to speed up tests
         if (isset($_ENV['noAudit']) && $_ENV['noAudit']) {
-            return false;
+            return true;
         }
 
-        return true;
+        return false;
     }
 
     protected function getAuditForEntity(Model $entity): Audit
     {
-        $audit = new Audit($entity->getPersistence());
+        $audit = (new Audit($entity->getPersistence()))->createEntity();
+        $entity->assertIsEntity();
         $audit->setParentEntity($entity);
         if (
-            isset($entity->persistence->app->auth->user)
-            && $entity->persistence->app->auth->user->isLoaded()
+            property_exists($entity->getPersistence(), 'app')
+            && property_exists($entity->getPersistence()->app, 'auth')
+            && $entity->getPersistence()->app->auth->user->isLoaded()
         ) {
-            $audit->set('user_name', $entity->persistence->app->auth->user->getTitle());
-            $audit->set('user_id', $entity->persistence->app->auth->user->getId());
+            $audit->set('user_name', $entity->getPersistence()->app->auth->user->getTitle());
+            $audit->set('user_id', $entity->getPersistence()->app->auth->user->getId());
         }
 
         return $audit;

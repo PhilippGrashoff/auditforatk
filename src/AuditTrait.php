@@ -51,7 +51,7 @@ trait AuditTrait
         $this->onHook(
             Model::HOOK_BEFORE_SAVE,
             function (self $entity) {
-                $entity->dirtyBeforeSave = clone $entity->getDirtyRef();
+                $entity->dirtyBeforeSave = array_replace([], $entity->getDirtyRef());
             },
             [],
             999

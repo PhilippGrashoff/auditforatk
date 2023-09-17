@@ -26,6 +26,7 @@ class ModelWithAudit extends Model
         $this->addField('time', ['type' => 'time']);
         $this->addField('date', ['type' => 'date']);
         $this->addField('datetime', ['type' => 'datetime']);
+        $this->addField('never_persist', ['type' => 'string', 'neverPersist' => true]);
         $this->addField(
             'values',
             [
