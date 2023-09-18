@@ -2,9 +2,10 @@
 
 namespace PhilippR\Atk4\Audit\Tests;
 
-use _PHPStan_95cdbe577\Nette\Utils\DateTime;
 use Atk4\Data\Persistence\Sql;
 use Atk4\Data\Schema\TestCase;
+use Cassandra\Date;
+use DateTime;
 use PhilippR\Atk4\Audit\Audit;
 use PhilippR\Atk4\Audit\Tests\Testclasses\ModelWithAudit;
 use PhilippR\Atk4\Audit\Tests\Testclasses\User;
@@ -47,17 +48,6 @@ class FieldsAuditTest extends TestCase
         );
     }
 
-    public function testFieldCaptionIsTaken(): void
-    {
-        $entity = (new ModelWithAudit($this->db))->createEntity();
-        $entity->set('string', 'SomeString');
-        $entity->save();
-        self::assertSame(
-            'SomeCaption',
-            $entity->ref(Audit::class)->loadAny()->get('ident'),
-        );
-    }
-
     public function testNoAuditCreatedOnNoChange(): void
     {
         $entity = (new ModelWithAudit($this->db))->createEntity();
@@ -71,11 +61,11 @@ class FieldsAuditTest extends TestCase
         $entity->set('time', $now);
         $entity->set('date', $now);
         $entity->set('datetime', $now);
-        $entity->set('values', 1);
+        $entity->set('values_integer_key', 1);
         $entity->save();
 
         self::assertEquals(
-            2,
+            10,
             $entity->ref(Audit::class)->action('count')->getOne()
         );
 
@@ -88,56 +78,37 @@ class FieldsAuditTest extends TestCase
         $entity->set('time', $now);
         $entity->set('date', $now);
         $entity->set('datetime', $now);
-        $entity->set('values', 1);
+        $entity->set('values_integer_key', 1);
         $entity->save();
 
         self::assertEquals(
-            2,
+            10,
             $entity->ref(Audit::class)->action('count')->getOne()
         );
     }
 
-
-    public function testFieldValueIdenticalNoAudit(): void
-    {
-        $entity = (new ModelWithAudit($this->db))->createEntity();
-        $entity->set('string', 'Dede');
-        $data = [];
-        $this->callProtected($entity, '_addFieldToAudit', $data, 'string', 'Dede');
-        self::assertSame(
-            [],
-            $data
-        );
-    }
-
-    public function testStringsLooselyComparedNoAudit(): void
+    public function testEmptyStringsVsNullNoAudit(): void
     {
         $entity = (new ModelWithAudit($this->db))->createEntity();
         $entity->set('string', null);
-        $data = [];
-        //as strings are compared using ==, null should equal ''
-        $this->callProtected($entity, '_addFieldToAudit', $data, 'string', '');
-        self::assertSame(
-            [],
-            $data
-        );
-    }
-
-    public function testSeveralFieldChangesCreateOneAuditEntry(): void
-    {
-        $entity = (new ModelWithAudit($this->db))->createEntity();
-        $entity->set('string', 'Lala');
-        $entity->set('text', 'Gaga');
         $entity->save();
-
         self::assertEquals(
-            2,
-            $entity->ref(Audit::class)->action('count')->getOne()
+            1,
+            (new Audit($this->db))->action('count')->getOne()
         );
 
-        self::assertCount(
-            2,
-            $entity->ref(Audit::class)->loadAny()->get('data')
+        $entity->set('string', '');
+        $entity->save();
+        self::assertEquals(
+            1,
+            (new Audit($this->db))->action('count')->getOne()
+        );
+
+        $entity->set('string', null);
+        $entity->save();
+        self::assertEquals(
+            1,
+            (new Audit($this->db))->action('count')->getOne()
         );
     }
 
@@ -149,88 +120,100 @@ class FieldsAuditTest extends TestCase
         $entity->save();
 
         self::assertEquals(
-            2,
+            3,
             $entity->ref(Audit::class)->action('count')->getOne()
         );
 
+        $clonedEntity = clone $entity;
         $entity->delete();
-
-        $auditForModel = new Audit($this->db);
-        $auditForModel->set('model_id', $entity->get('id'));
-        $auditForModel->set('model_class', ModelWithAudit::class);
-
-        self::assertEquals(
-            3,
-            $auditForModel->action('count')->getOne()
-        );
-    }
-
-    public function testCreateChangeAndDeleteAuditIsAdded(): void
-    {
-        $entity = (new ModelWithAudit($this->db))->createEntity();
-        $entity->set('string', 'Lala');
-        $entity->set('text', 'Gaga');
-        $entity->save();
-        $entity->set('string', 'Baba');
-        $entity->save();
-        $entity->delete();
-
-        $auditForModel = (new Audit($this->db))->createEntity();
-        $auditForModel->set('model_id', $entity->get('id'));
-        $auditForModel->set('model_class', ModelWithAudit::class);
 
         self::assertEquals(
             4,
-            $auditForModel->action('count')->getOne()
+            $clonedEntity->ref(Audit::class)->action('count')->getOne()
         );
-
-        $check = ['CREATED', 'CHANGE', 'DELETE'];
-
-        foreach ($check as $valueName) {
-            $checkAudit = clone $auditForModel;
-            $checkAudit->addCondition('value', $valueName);
-            $checkAudit->tryLoadAny();
-
-            self::assertTrue($checkAudit->loaded());
-        }
     }
 
     public function testTimeFieldAudit(): void
     {
+        $now = new DateTime();
         $entity = (new ModelWithAudit($this->db))->createEntity();
-        $entity->set('time', '11:11');
+        $entity->set('time', $now);
         $entity->save();
 
         $audit = $entity->ref(Audit::class)->loadAny();
         self::assertSame(
-            '11:11',
-            $audit->get('data')['time']['new_value']
+            $now->format('Hisv'),
+            $audit->get('data')->newValue->format('Hisv')
+        );
+
+        sleep(1);
+        $newNow = new DateTime();
+        $entity->set('time', $newNow);
+        $entity->save();
+        $audit = $entity->ref(Audit::class)->loadAny();
+        self::assertSame(
+            $now->format('Hisv'),
+            $audit->get('data')->oldValue->format('Hisv')
+        );
+        self::assertSame(
+            $newNow->format('Hisv'),
+            $audit->get('data')->newValue->format('Hisv')
         );
     }
 
     public function testDateTimeFieldAudit(): void
     {
+        $now = new DateTime();
         $entity = (new ModelWithAudit($this->db))->createEntity();
-        $entity->set('datetime', '2020-01-01T11:11:00+00:00');
+        $entity->set('datetime', $now);
         $entity->save();
 
         $audit = $entity->ref(Audit::class)->loadAny();
         self::assertSame(
-            '01.01.2020 11:11',
-            $audit->get('data')['datetime']['new_value']
+            $now->format(DATE_ATOM),
+            $audit->get('data')->newValue->format(DATE_ATOM)
+        );
+
+        sleep(1);
+        $newNow = new DateTime();
+        $entity->set('datetime', $newNow);
+        $entity->save();
+        $audit = $entity->ref(Audit::class)->loadAny();
+        self::assertSame(
+            $now->format(DATE_ATOM),
+            $audit->get('data')->oldValue->format(DATE_ATOM)
+        );
+        self::assertSame(
+            $newNow->format(DATE_ATOM),
+            $audit->get('data')->newValue->format(DATE_ATOM)
         );
     }
 
     public function testDateFieldAudit(): void
     {
+        $now = new DateTime();
         $entity = (new ModelWithAudit($this->db))->createEntity();
-        $entity->set('date', '2020-01-01T11:11:00+00:00');
+        $entity->set('date', $now);
         $entity->save();
 
         $audit = $entity->ref(Audit::class)->loadAny();
         self::assertSame(
-            '01.01.2020',
-            $audit->get('data')['date']['new_value']
+            $now->format('Ymd'),
+            $audit->get('data')->newValue->format('Ymd')
+        );
+
+        sleep(1);
+        $yesterday = (new DateTime())->modify('-1 Day');
+        $entity->set('date', $yesterday);
+        $entity->save();
+        $audit = $entity->ref(Audit::class)->loadAny();
+        self::assertSame(
+            $now->format('Ymd'),
+            $audit->get('data')->oldValue->format('Ymd')
+        );
+        self::assertSame(
+            $yesterday->format('Ymd'),
+            $audit->get('data')->newValue->format('Ymd')
         );
     }
 
@@ -238,96 +221,117 @@ class FieldsAuditTest extends TestCase
     {
         $entity = (new ModelWithAudit($this->db))->createEntity();
 
-        $user1 = new User($this->db);
-        $user1->set('string', 'Hans');
+        $user1 = (new User($this->db))->createEntity();
+        $user1->set('name', 'Hans');
         $user1->save();
 
-        $user2 = new User($this->db);
-        $user2->set('string', 'Peter');
+        $user2 = (new User($this->db))->createEntity();
+        $user2->set('name', 'Peter');
         $user2->save();
 
-        $entity->set('user_id', $user1->get('id'));
+        $entity->set('user_id', $user1->getId());
         $entity->save();
-        $audit = $entity->ref(Audit::class);
-        $audit->loadAny();
-        self::assertEquals(
-            [
-                'field_name' => 'Benutzer',
-                'old_value' => null,
-                'new_value' => 'Hans'
-            ],
-            $audit->get('data')['user_id']
+        $audit = $entity->ref(Audit::class)->loadAny();
+        $expected = new \stdClass();
+        $expected->fieldType = 'integer';
+        $expected->oldValue = null;
+        $expected->newValue = $user1->getId();
+        self::assertSame(
+            json_encode($expected),
+            json_encode($audit->get('data'))
         );
 
-        $entity->set('user_id', $user2->get('id'));
+
+        $entity->set('user_id', $user2->getId());
         $entity->save();
-        $audit = $entity->ref(Audit::class);
-        $audit->loadAny();
-        self::assertEquals(
-            [
-                'field_name' => 'Benutzer',
-                'old_value' => 'Hans',
-                'new_value' => 'Peter'
-            ],
-            $audit->get('data')['user_id']
+        $audit = $entity->ref(Audit::class)->loadAny();
+        $expected->oldValue = $user1->getId();
+        $expected->newValue = $user2->getId();
+        self::assertSame(
+            json_encode($expected),
+            json_encode($audit->get('data'))
         );
 
         $entity->set('user_id', null);
         $entity->save();
-        $audit = $entity->ref(Audit::class);
-        $audit->loadAny();
+        $audit = $entity->ref(Audit::class)->loadAny();
+        $expected->oldValue = $user2->getId();
+        $expected->newValue = null;
         self::assertEquals(
-            [
-                'field_name' => 'Benutzer',
-                'old_value' => 'Peter',
-                'new_value' => null
-            ],
-            $audit->get('data')['user_id']
+            json_encode($expected),
+            json_encode($audit->get('data'))
         );
     }
-
-
-    public function testValuesFieldAudit(): void
+    
+    public function testValuesFieldWithIntegerKeyAudit(): void
     {
         $entity = (new ModelWithAudit($this->db))->createEntity();
-
-        $entity->set('values', 0);
+        $entity->set('values_integer_key', 0);
         $entity->save();
-        $audit = $entity->ref(Audit::class);
-        $audit->loadAny();
-        self::assertEquals(
-            [
-                'field_name' => 'ValuesTest',
-                'old_value' => '',
-                'new_value' => 'SomeValue'
-            ],
-            $audit->get('data')['values']
+        $audit = $entity->ref(Audit::class)->loadAny();
+        $expected = new \stdClass();
+        $expected->fieldType = 'integer';
+        $expected->oldValue = null;
+        $expected->newValue = 0;
+        self::assertSame(
+            json_encode($expected),
+            json_encode($audit->get('data'))
         );
 
-        $entity->set('values', 1);
+        $entity->set('values_integer_key', 1);
         $entity->save();
-        $audit = $entity->ref(Audit::class);
-        $audit->loadAny();
-        self::assertEquals(
-            [
-                'field_name' => 'ValuesTest',
-                'old_value' => 'SomeValue',
-                'new_value' => 'SomeOtherValue'
-            ],
-            $audit->get('data')['values']
+        $audit = $entity->ref(Audit::class)->loadAny();
+        $expected->oldValue = 0;
+        $expected->newValue = 1;
+        self::assertSame(
+            json_encode($expected),
+            json_encode($audit->get('data'))
         );
 
-        $entity->set('values', null);
+        $entity->set('values_integer_key', null);
         $entity->save();
-        $audit = $entity->ref(Audit::class);
-        $audit->loadAny();
-        self::assertEquals(
-            [
-                'field_name' => 'ValuesTest',
-                'old_value' => 'SomeOtherValue',
-                'new_value' => ''
-            ],
-            $audit->get('data')['values']
+        $audit = $entity->ref(Audit::class)->loadAny();
+        $expected->oldValue = 1;
+        $expected->newValue = null;
+        self::assertSame(
+            json_encode($expected),
+            json_encode($audit->get('data'))
+        );
+    }
+    
+    public function testValuesFieldWithStringKeyAudit(): void
+    {
+        $entity = (new ModelWithAudit($this->db))->createEntity();
+        $entity->set('values_string_key', 'first');
+        $entity->save();
+        $audit = $entity->ref(Audit::class)->loadAny();
+        $expected = new \stdClass();
+        $expected->fieldType = 'string';
+        $expected->oldValue = null;
+        $expected->newValue = 'first';
+        self::assertSame(
+            json_encode($expected),
+            json_encode($audit->get('data'))
+        );
+
+        $entity->set('values_string_key', 'second');
+        $entity->save();
+        $audit = $entity->ref(Audit::class)->loadAny();
+        $expected->oldValue = 'first';
+        $expected->newValue = 'second';
+        self::assertSame(
+            json_encode($expected),
+            json_encode($audit->get('data'))
+        );
+
+        $entity->set('values_string_key', null);
+        $entity->save();
+        $audit = $entity->ref(Audit::class)->loadAny();
+        $expected->oldValue = 'second';
+        $expected->newValue = null;
+        self::assertSame(
+            json_encode($expected),
+            json_encode($audit->get('data'))
         );
     }
 }

@@ -34,7 +34,7 @@ class MessageRenderer
 
             case 'json':
             case 'object':
-            return $this->renderJsonFieldAudit($audit);
+                return $this->renderJsonFieldAudit($audit);
             default:
                 return $this->renderScalarFieldAudit($audit);
         }
@@ -76,11 +76,12 @@ class MessageRenderer
     {
         $auditData = $audit->get('data');
         if ($auditData->oldValue) {
-            $renderedMessage = 'changed "' . $audit->get('ident') . '" from "' . $auditData->oldValue . '" to ';
+            $renderedMessage = 'changed "' . $audit->get('ident') . '" from "'
+                . ($auditData->oldValue ? json_encode($auditData->oldValue) : '') . '" to ';
         } else {
             $renderedMessage = 'set "' . $audit->get('ident') . ' to ';
         }
-        $renderedMessage .= '"' . $auditData->newValue . '"';
+        $renderedMessage .= '"' . ($auditData->newValue ? json_encode($auditData->newValue) : '') . '"';
 
         return $renderedMessage;
     }
@@ -89,6 +90,14 @@ class MessageRenderer
     //human-readable Audit
     public function renderHasOneAudit(Audit $audit): string
     {
+        //fields with key-value lists
+        if (
+            is_array($entity->getField($fieldName)->values)
+            && count($entity->getField($fieldName)->values) > 0
+        ) {
+            $this->keyValueAudit($entity, $fieldName, $dirtyValue);
+        }
+
         $entity = $audit->getParentEntity();
         $auditData = $audit->get('data');
         $oldEntity = null;
@@ -96,20 +105,48 @@ class MessageRenderer
         if ($auditData->oldValue) {
             $oldEntity = $entity->refModel($audit->get('ident'));
             $oldEntity->onlyFields = [$oldEntity->idField, $oldEntity->titleField];
-            $oldEntity->load($auditData->oldValue);
+            $oldEntity = $oldEntity->load($auditData->oldValue);
         }
         if ($auditData->newValue) {
             $newEntity = $entity->refModel($audit->get('ident'));
             $newEntity->onlyFields = [$newEntity->idField, $newEntity->titleField];
-            $newEntity->load($entity->get($auditData->newValue));
+            $newEntity = $newEntity->load($auditData->newValue);
         }
-        if ($oldEntity) {
+
+        if ($oldEntity !== null) {
             $renderedMessage = 'changed "' . $audit->get('ident') . '" from "' . $oldEntity->getTitle() . '" to ';
         } else {
             $renderedMessage = 'set "' . $audit->get('ident') . ' to ';
         }
-        $renderedMessage .= '"' . ($newEntity ? $newEntity->getTitle() : $auditData->newValue) . '"';
+        $renderedMessage .= '"' . ($newEntity !== null ? $newEntity->getTitle() : $auditData->newValue) . '"';
 
         return $renderedMessage;
+    }
+
+
+    protected function keyValueAudit(Model $entity, string $fieldName, $dirtyValue): Audit
+    {
+        $audit = $this->getAuditForEntity($entity);
+        $audit->set('type', 'FIELD');
+        $audit->set('ident', $fieldName);
+
+        $oldValueTitle = $newValueTitle = '';
+        if (isset($entity->getField($fieldName)->values[$dirtyValue])) {
+            $oldValueTitle = $entity->getField($fieldName)->values[$dirtyValue];
+        }
+
+        if (isset($entity->getField($fieldName)->values[$entity->get($fieldName)])) {
+            $newValueTitle = $entity->getField($fieldName)->values[$entity->get($fieldName)];
+        }
+        $data = new \stdClass();
+        $data->fieldType = $entity->getField($fieldName)->type;
+        $data->oldValue = $oldValueTitle;
+        $data->newValue = $newValueTitle;
+        $audit->set('data', $data);
+
+        $audit->set('rendered_message', $this->messageRenderer->renderFieldAudit($audit));
+        $audit->save();
+
+        return $audit;
     }
 }

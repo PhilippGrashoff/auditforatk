@@ -31,10 +31,19 @@ class ModelWithAudit extends Model
         $this->addField('datetime', ['type' => 'datetime']);
         $this->addField('never_persist', ['type' => 'string', 'neverPersist' => true]);
         $this->addField(
-            'values',
+            'values_integer_key',
             [
+                'type' => 'integer',
                 'caption' => 'ValuesTest',
                 'values' => [0 => 'SomeValue', 1 => 'SomeOtherValue']
+            ]
+        );
+        $this->addField(
+            'values_string_key',
+            [
+                'type' => 'string',
+                'caption' => 'ValuesTest',
+                'values' => ['first' => 'SomeValue', 'second' => 'SomeOtherValue']
             ]
         );
 

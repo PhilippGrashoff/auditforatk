@@ -19,24 +19,4 @@ class MessageRendererTest extends TestCase
         $this->createMigrator(new Audit($this->db))->create();
         $this->createMigrator(new User($this->db))->create();
     }
-
-    public function testUserInfoOnSave()
-    {
-        $audit = new Audit($this->getPersistence());
-        $audit->save();
-        self::assertEquals(
-            $audit->get('created_by_name'),
-            'SOME NAME'
-        );
-    }
-
-    public function testAuditMessageRendererIsUsed()
-    {
-        $audit = new Audit($this->getPersistence(), ['auditRenderer' => new AuditRendererDemo()]);
-        $audit->save();
-        self::assertEquals(
-            $audit->get('rendered_output'),
-            'Demo'
-        );
-    }
 }

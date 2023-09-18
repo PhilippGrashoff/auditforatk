@@ -72,12 +72,13 @@ class AuditController
             return;
         }
         foreach ($entity->dirtyBeforeSave as $fieldName => $dirtyValue) {
+            $field = $entity->getField($fieldName);
             //only audit non system fields and fields that go to persistence
             if (
                 in_array($fieldName, $entity->skipFieldsFromAudit)
                 || !$entity->hasField($fieldName)
                 || $fieldName === $entity->idField
-                || $entity->getField($fieldName)->neverPersist
+                || $field->neverPersist
             ) {
                 continue;
             }
@@ -85,6 +86,14 @@ class AuditController
             if ($dirtyValue === $entity->get($fieldName)) {
                 continue;
             }
+            //string types do not get any additional audit value regarding null vs enpty string. Hence strings are
+            //loosely using == only
+            if($field->type == 'string' || $field->type == 'text') {
+                if ($dirtyValue == $entity->get($fieldName)) {
+                    continue;
+                }
+            }
+
             $this->addFieldChangedAudit($entity, $fieldName, $dirtyValue);
         }
     }
@@ -102,15 +111,9 @@ class AuditController
         //hasOne references
         if (
             $entity->hasReference($fieldName)
-            && $entity->getReference($fieldName) instanceof HasOne
+            && $entity->getModel()->getReference($fieldName) instanceof HasOne
         ) {
             $this->hasOneAudit($entity, $fieldName, $dirtyValue);
-        } //fields with key-value lists
-        elseif (
-            is_array($entity->getField($fieldName)->values)
-            && count($entity->getField($fieldName)->values) > 0
-        ) {
-            $this->keyValueAudit($entity, $fieldName, $dirtyValue);
         } //any other field
         else {
             $this->normalFieldAudit($entity, $fieldName, $dirtyValue);
@@ -136,34 +139,8 @@ class AuditController
     protected function hasOneAudit(Model $entity, string $fieldName, $dirtyValue): Audit
     {
         $audit = $this->getAuditForEntity($entity);
-        $this->setFieldDataToAudit($audit, $entity, $fieldName, $dirtyValue, 'FIELD');
+        $this->setFieldDataToAudit($audit, $entity, $fieldName, $dirtyValue, 'FIELD_HASONE');
         $audit->set('rendered_message', $this->messageRenderer->renderHasOneAudit($audit));
-        $audit->save();
-
-        return $audit;
-    }
-
-    protected function keyValueAudit(Model $entity, string $fieldName, $dirtyValue): Audit
-    {
-        $audit = $this->getAuditForEntity($entity);
-        $audit->set('type', 'FIELD');
-        $audit->set('ident', $entity->getField($fieldName)->getCaption());
-
-        $oldValue = $newValue = '';
-        if (isset($entity->getField($fieldName)->values[$dirtyValue])) {
-            $oldValue = $entity->getField($fieldName)->values[$dirtyValue];
-        }
-
-        if (isset($entity->getField($fieldName)->values[$entity->get($fieldName)])) {
-            $newValue = $entity->getField($fieldName)->values[$entity->get($fieldName)];
-        }
-        $data = new \stdClass();
-        $data->fieldType = $entity->getField($fieldName)->type;
-        $data->oldValue = $oldValue;
-        $data->newValue = $newValue;
-        $audit->set('data', $data);
-
-        $audit->set('rendered_message', $this->messageRenderer->renderFieldAudit($audit));
         $audit->save();
 
         return $audit;
@@ -177,7 +154,7 @@ class AuditController
         string $type
     ): void {
         $audit->set('type', $type);
-        $audit->set('ident', $entity->getField($fieldName)->getCaption());
+        $audit->set('ident', $fieldName);
         $data = new \stdClass();
         $data->fieldType = $entity->getField($fieldName)->type;
         $data->oldValue = $dirtyValue;
