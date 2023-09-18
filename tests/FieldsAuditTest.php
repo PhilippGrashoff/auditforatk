@@ -2,11 +2,10 @@
 
 namespace PhilippR\Atk4\Audit\Tests;
 
-use Atk4\Data\Persistence;
+use _PHPStan_95cdbe577\Nette\Utils\DateTime;
 use Atk4\Data\Persistence\Sql;
 use Atk4\Data\Schema\TestCase;
 use PhilippR\Atk4\Audit\Audit;
-use PhilippR\Atk4\Audit\Tests\Testclasses\AuditRendererDemo;
 use PhilippR\Atk4\Audit\Tests\Testclasses\ModelWithAudit;
 use PhilippR\Atk4\Audit\Tests\Testclasses\User;
 
@@ -19,122 +18,145 @@ class FieldsAuditTest extends TestCase
         parent::setUp();
         $this->db = new Sql('sqlite::memory:');
         $this->createMigrator(new Audit($this->db))->create();
+        $this->createMigrator(new ModelWithAudit($this->db))->create();
         $this->createMigrator(new User($this->db))->create();
     }
 
-    public function testSettingInAppDisablesAudit()
+    public function testCreatedAndDeletedAuditIsAdded(): void
     {
-        $this->db = $this->getSqliteTestPersistence([Email::class]);
-        $this->db->app = new AppWithAuditSetting();
-        $this->db->app->createAudit = false;
-        $model = new ModelWithAudit($this->db);
-        $model->set('name', 'Lala');
-        $model->save();
-
-        $user = new User($this->db);
-        $user->save();
-        $model->addMToMAudit('ADD', $user);
-
-        $email = new Email($this->db);
-        $email->save();
-        $model->addSecondaryAudit('ADD', $email);
-
-        $model->addAdditionalAudit('SOMETYPE', []);
-
-        $audit = $model->ref(Audit::class);
-
+        $entity = (new ModelWithAudit($this->db))->createEntity();
+        $entity->save();
         self::assertEquals(
-            0,
-            $audit->action('count')->getOne()
+            1,
+            (new Audit($this->db))->action('count')->getOne()
+        );
+        self::assertSame(
+            'CREATED',
+            $entity->ref(Audit::class)->loadAny()->get('type'),
         );
 
-        $model->delete();
-
+        $clonedEntity = clone $entity;
+        $entity->delete();
         self::assertEquals(
-            0,
-            $audit->action('count')->getOne()
+            2,
+            (new Audit($this->db))->action('count')->getOne()
+        );
+        self::assertSame(
+            'DELETED',
+            $clonedEntity->ref(Audit::class)->loadAny()->get('type'),
         );
     }
 
-    public function testNoAuditCreatedOnNoChange()
+    public function testFieldCaptionIsTaken(): void
     {
-        $model = new ModelWithAudit($this->db);
-
-        //should create
-        $model->set('name', 'Lala');
-        $model->save();
-        self::assertEquals(
-            2,
-            $model->ref(Audit::class)->action('count')->getOne()
+        $entity = (new ModelWithAudit($this->db))->createEntity();
+        $entity->set('string', 'SomeString');
+        $entity->save();
+        self::assertSame(
+            'SomeCaption',
+            $entity->ref(Audit::class)->loadAny()->get('ident'),
         );
-        $model->set('name', 'Lala');
-        $model->save();
+    }
+
+    public function testNoAuditCreatedOnNoChange(): void
+    {
+        $entity = (new ModelWithAudit($this->db))->createEntity();
+        $now = new DateTime();
+        //should create audits
+        $entity->set('string', 'Lala');
+        $entity->set('text', 'Lala');
+        $entity->set('integer', 11);
+        $entity->set('float', 11.111);
+        $entity->set('json', ["la" => "la", "da" => "da"]);
+        $entity->set('time', $now);
+        $entity->set('date', $now);
+        $entity->set('datetime', $now);
+        $entity->set('values', 1);
+        $entity->save();
+
         self::assertEquals(
             2,
-            $model->ref(Audit::class)->action('count')->getOne()
+            $entity->ref(Audit::class)->action('count')->getOne()
+        );
+
+        //Same Values everywhere, should not create any additional audit
+        $entity->set('string', 'Lala');
+        $entity->set('text', 'Lala');
+        $entity->set('integer', 11);
+        $entity->set('float', 11.111);
+        $entity->set('json', ["la" => "la", "da" => "da"]);
+        $entity->set('time', $now);
+        $entity->set('date', $now);
+        $entity->set('datetime', $now);
+        $entity->set('values', 1);
+        $entity->save();
+
+        self::assertEquals(
+            2,
+            $entity->ref(Audit::class)->action('count')->getOne()
         );
     }
 
 
-    public function testFieldValueIdenticalNoAudit()
+    public function testFieldValueIdenticalNoAudit(): void
     {
-        $model = new ModelWithAudit($this->db);
-        $model->set('name', 'Dede');
+        $entity = (new ModelWithAudit($this->db))->createEntity();
+        $entity->set('string', 'Dede');
         $data = [];
-        $this->callProtected($model, '_addFieldToAudit', $data, 'name', 'Dede');
+        $this->callProtected($entity, '_addFieldToAudit', $data, 'string', 'Dede');
         self::assertSame(
             [],
             $data
         );
     }
 
-    public function testStringsLooselyComparedNoAudit()
+    public function testStringsLooselyComparedNoAudit(): void
     {
-        $model = new ModelWithAudit($this->db);
-        $model->set('name', null);
+        $entity = (new ModelWithAudit($this->db))->createEntity();
+        $entity->set('string', null);
         $data = [];
         //as strings are compared using ==, null should equal ''
-        $this->callProtected($model, '_addFieldToAudit', $data, 'name', '');
+        $this->callProtected($entity, '_addFieldToAudit', $data, 'string', '');
         self::assertSame(
             [],
             $data
         );
     }
 
-    public function testSeveralFieldChangesCreateOneAuditEntry()
+    public function testSeveralFieldChangesCreateOneAuditEntry(): void
     {
-        $model = new ModelWithAudit($this->db);
-        $model->set('name', 'Lala');
-        $model->set('other_field', 'Gaga');
-        $model->save();
+        $entity = (new ModelWithAudit($this->db))->createEntity();
+        $entity->set('string', 'Lala');
+        $entity->set('text', 'Gaga');
+        $entity->save();
 
         self::assertEquals(
             2,
-            $model->ref(Audit::class)->action('count')->getOne()
+            $entity->ref(Audit::class)->action('count')->getOne()
         );
 
         self::assertCount(
             2,
-            $model->ref(Audit::class)->loadAny()->get('data')
+            $entity->ref(Audit::class)->loadAny()->get('data')
         );
     }
 
-    public function testAuditRemainsAfterDeletingModel()
+    public function testAuditRemainsAfterDeletingModel(): void
     {
-        $model = new ModelWithAudit($this->db);
-        $model->set('name', 'Lala');
-        $model->set('other_field', 'Gaga');
-        $model->save();
+        $entity = (new ModelWithAudit($this->db))->createEntity();
+        $entity->set('string', 'Lala');
+        $entity->set('text', 'Gaga');
+        $entity->save();
 
         self::assertEquals(
             2,
-            $model->ref(Audit::class)->action('count')->getOne()
+            $entity->ref(Audit::class)->action('count')->getOne()
         );
 
-        $model->delete();
+        $entity->delete();
 
         $auditForModel = new Audit($this->db);
-        $auditForModel->set('model_id', $model->get('id'));
+        $auditForModel->set('model_id', $entity->get('id'));
         $auditForModel->set('model_class', ModelWithAudit::class);
 
         self::assertEquals(
@@ -143,18 +165,18 @@ class FieldsAuditTest extends TestCase
         );
     }
 
-    public function testCreateChangeAndDeleteAuditIsAdded()
+    public function testCreateChangeAndDeleteAuditIsAdded(): void
     {
-        $model = new ModelWithAudit($this->db);
-        $model->set('name', 'Lala');
-        $model->set('other_field', 'Gaga');
-        $model->save();
-        $model->set('name', 'Baba');
-        $model->save();
-        $model->delete();
+        $entity = (new ModelWithAudit($this->db))->createEntity();
+        $entity->set('string', 'Lala');
+        $entity->set('text', 'Gaga');
+        $entity->save();
+        $entity->set('string', 'Baba');
+        $entity->save();
+        $entity->delete();
 
-        $auditForModel = new Audit($this->db);
-        $auditForModel->set('model_id', $model->get('id'));
+        $auditForModel = (new Audit($this->db))->createEntity();
+        $auditForModel->set('model_id', $entity->get('id'));
         $auditForModel->set('model_class', ModelWithAudit::class);
 
         self::assertEquals(
@@ -162,7 +184,7 @@ class FieldsAuditTest extends TestCase
             $auditForModel->action('count')->getOne()
         );
 
-        $check = ['CREATE', 'CHANGE', 'DELETE'];
+        $check = ['CREATED', 'CHANGE', 'DELETE'];
 
         foreach ($check as $valueName) {
             $checkAudit = clone $auditForModel;
@@ -173,60 +195,60 @@ class FieldsAuditTest extends TestCase
         }
     }
 
-    public function testTimeFieldAudit()
+    public function testTimeFieldAudit(): void
     {
-        $model = new ModelWithAudit($this->db);
-        $model->set('time', '11:11');
-        $model->save();
+        $entity = (new ModelWithAudit($this->db))->createEntity();
+        $entity->set('time', '11:11');
+        $entity->save();
 
-        $audit = $model->ref(Audit::class)->loadAny();
+        $audit = $entity->ref(Audit::class)->loadAny();
         self::assertSame(
             '11:11',
             $audit->get('data')['time']['new_value']
         );
     }
 
-    public function testDateTimeFieldAudit()
+    public function testDateTimeFieldAudit(): void
     {
-        $model = new ModelWithAudit($this->db);
-        $model->set('datetime', '2020-01-01T11:11:00+00:00');
-        $model->save();
+        $entity = (new ModelWithAudit($this->db))->createEntity();
+        $entity->set('datetime', '2020-01-01T11:11:00+00:00');
+        $entity->save();
 
-        $audit = $model->ref(Audit::class)->loadAny();
+        $audit = $entity->ref(Audit::class)->loadAny();
         self::assertSame(
             '01.01.2020 11:11',
             $audit->get('data')['datetime']['new_value']
         );
     }
 
-    public function testDateFieldAudit()
+    public function testDateFieldAudit(): void
     {
-        $model = new ModelWithAudit($this->db);
-        $model->set('date', '2020-01-01T11:11:00+00:00');
-        $model->save();
+        $entity = (new ModelWithAudit($this->db))->createEntity();
+        $entity->set('date', '2020-01-01T11:11:00+00:00');
+        $entity->save();
 
-        $audit = $model->ref(Audit::class)->loadAny();
+        $audit = $entity->ref(Audit::class)->loadAny();
         self::assertSame(
             '01.01.2020',
             $audit->get('data')['date']['new_value']
         );
     }
 
-    public function testHasOneAudit()
+    public function testHasOneAudit(): void
     {
-        $model = new ModelWithAudit($this->db);
+        $entity = (new ModelWithAudit($this->db))->createEntity();
 
         $user1 = new User($this->db);
-        $user1->set('name', 'Hans');
+        $user1->set('string', 'Hans');
         $user1->save();
 
         $user2 = new User($this->db);
-        $user2->set('name', 'Peter');
+        $user2->set('string', 'Peter');
         $user2->save();
 
-        $model->set('user_id', $user1->get('id'));
-        $model->save();
-        $audit = $model->ref(Audit::class);
+        $entity->set('user_id', $user1->get('id'));
+        $entity->save();
+        $audit = $entity->ref(Audit::class);
         $audit->loadAny();
         self::assertEquals(
             [
@@ -237,9 +259,9 @@ class FieldsAuditTest extends TestCase
             $audit->get('data')['user_id']
         );
 
-        $model->set('user_id', $user2->get('id'));
-        $model->save();
-        $audit = $model->ref(Audit::class);
+        $entity->set('user_id', $user2->get('id'));
+        $entity->save();
+        $audit = $entity->ref(Audit::class);
         $audit->loadAny();
         self::assertEquals(
             [
@@ -250,9 +272,9 @@ class FieldsAuditTest extends TestCase
             $audit->get('data')['user_id']
         );
 
-        $model->set('user_id', null);
-        $model->save();
-        $audit = $model->ref(Audit::class);
+        $entity->set('user_id', null);
+        $entity->save();
+        $audit = $entity->ref(Audit::class);
         $audit->loadAny();
         self::assertEquals(
             [
@@ -265,13 +287,13 @@ class FieldsAuditTest extends TestCase
     }
 
 
-    public function testValuesFieldAudit()
+    public function testValuesFieldAudit(): void
     {
-        $model = new ModelWithAudit($this->db);
+        $entity = (new ModelWithAudit($this->db))->createEntity();
 
-        $model->set('values', 0);
-        $model->save();
-        $audit = $model->ref(Audit::class);
+        $entity->set('values', 0);
+        $entity->save();
+        $audit = $entity->ref(Audit::class);
         $audit->loadAny();
         self::assertEquals(
             [
@@ -282,9 +304,9 @@ class FieldsAuditTest extends TestCase
             $audit->get('data')['values']
         );
 
-        $model->set('values', 1);
-        $model->save();
-        $audit = $model->ref(Audit::class);
+        $entity->set('values', 1);
+        $entity->save();
+        $audit = $entity->ref(Audit::class);
         $audit->loadAny();
         self::assertEquals(
             [
@@ -295,9 +317,9 @@ class FieldsAuditTest extends TestCase
             $audit->get('data')['values']
         );
 
-        $model->set('values', null);
-        $model->save();
-        $audit = $model->ref(Audit::class);
+        $entity->set('values', null);
+        $entity->save();
+        $audit = $entity->ref(Audit::class);
         $audit->loadAny();
         self::assertEquals(
             [
@@ -306,35 +328,6 @@ class FieldsAuditTest extends TestCase
                 'new_value' => ''
             ],
             $audit->get('data')['values']
-        );
-    }
-
-
-    public function testSkipFieldsIfSet()
-    {
-        $model = new ModelWithAudit($this->db);
-        $model->set('other_field', 'bla');
-        $model->save();
-        self::assertSame(
-            2,
-            (int)$model->ref(Audit::class)->action('count')->getOne()
-        );
-
-        //now disable audit for that field
-        $model->setSkipFields(['other_field']);
-        $model->set('other_field', 'du');
-        $model->save();
-        self::assertSame(
-            2,
-            (int)$model->ref(Audit::class)->action('count')->getOne()
-        );
-        //reenable, audit should be created
-        $model->setSkipFields(['name']);
-        $model->set('other_field', 'kra');
-        $model->save();
-        self::assertSame(
-            3,
-            (int)$model->ref(Audit::class)->action('count')->getOne()
         );
     }
 }

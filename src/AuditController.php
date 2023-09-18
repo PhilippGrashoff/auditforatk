@@ -48,13 +48,13 @@ class AuditController
      */
     public function addDeletedAudit(Model $entity): void
     {
-        if (!$this->noAudit()) {
+        if ($this->noAudit()) {
             return;
         }
 
         $audit = $this->getAuditForEntity($entity);
         $audit->set('type', 'DELETED');
-        $audit->set('rendered_message', $this->messageRenderer->renderDeletedMessage($audit));
+        $audit->set('rendered_message', $this->messageRenderer->renderDeletedMessage($audit, $entity));
         $audit->save();
     }
 
@@ -123,13 +123,7 @@ class AuditController
     protected function normalFieldAudit(Model $entity, string $fieldName, mixed $dirtyValue): Audit
     {
         $audit = $this->getAuditForEntity($entity);
-        $audit->set('type', 'FIELD');
-        $audit->set('data', [
-            'fieldType' => $entity->getField($fieldName)->type,
-            'fieldName' => $entity->getField($fieldName)->getCaption(),
-            'oldValue' => $dirtyValue,
-            'newValue' => $entity->get($fieldName),
-        ]);
+        $this->setFieldDataToAudit($audit, $entity, $fieldName, $dirtyValue, 'FIELD');
         $audit->set('rendered_message', $this->messageRenderer->renderFieldAudit($audit));
         $audit->save();
 
@@ -142,17 +136,7 @@ class AuditController
     protected function hasOneAudit(Model $entity, string $fieldName, $dirtyValue): Audit
     {
         $audit = $this->getAuditForEntity($entity);
-        $audit->set('type', 'FIELD_HASONE');
-
-        $audit->set(
-            'data',
-            [
-                'fieldName' => $entity->getField($fieldName)->getCaption(),
-                'oldValue' => $dirtyValue,
-                'newValue' => [$entity->get($fieldName)]
-            ]
-        );
-
+        $this->setFieldDataToAudit($audit, $entity, $fieldName, $dirtyValue, 'FIELD');
         $audit->set('rendered_message', $this->messageRenderer->renderHasOneAudit($audit));
         $audit->save();
 
@@ -163,6 +147,7 @@ class AuditController
     {
         $audit = $this->getAuditForEntity($entity);
         $audit->set('type', 'FIELD');
+        $audit->set('ident', $entity->getField($fieldName)->getCaption());
 
         $oldValue = $newValue = '';
         if (isset($entity->getField($fieldName)->values[$dirtyValue])) {
@@ -172,20 +157,32 @@ class AuditController
         if (isset($entity->getField($fieldName)->values[$entity->get($fieldName)])) {
             $newValue = $entity->getField($fieldName)->values[$entity->get($fieldName)];
         }
-
-        $audit->set(
-            'data',
-            [
-                'fieldName' => $entity->getField($fieldName)->getCaption(),
-                'oldValue' => $oldValue,
-                'newValue' => $newValue,
-            ]
-        );
+        $data = new \stdClass();
+        $data->fieldType = $entity->getField($fieldName)->type;
+        $data->oldValue = $oldValue;
+        $data->newValue = $newValue;
+        $audit->set('data', $data);
 
         $audit->set('rendered_message', $this->messageRenderer->renderFieldAudit($audit));
         $audit->save();
 
         return $audit;
+    }
+
+    protected function setFieldDataToAudit(
+        Audit $audit,
+        Model $entity,
+        string $fieldName,
+        mixed $dirtyValue,
+        string $type
+    ): void {
+        $audit->set('type', $type);
+        $audit->set('ident', $entity->getField($fieldName)->getCaption());
+        $data = new \stdClass();
+        $data->fieldType = $entity->getField($fieldName)->type;
+        $data->oldValue = $dirtyValue;
+        $data->newValue = $entity->get($fieldName);
+        $audit->set('data', $data);
     }
 
     protected function noAudit(): bool
@@ -204,12 +201,12 @@ class AuditController
         $entity->assertIsEntity();
         $audit->setParentEntity($entity);
         if (
-            property_exists($entity->getPersistence(), 'app')
-            && property_exists($entity->getPersistence()->app, 'auth')
-            && $entity->getPersistence()->app->auth->user->isLoaded()
+            method_exists($entity->getPersistence(), 'getApp')
+            && property_exists($entity->getPersistence()->getApp(), 'auth')
+            && $entity->getPersistence()->getApp()->auth->user->isLoaded()
         ) {
-            $audit->set('user_name', $entity->getPersistence()->app->auth->user->getTitle());
-            $audit->set('user_id', $entity->getPersistence()->app->auth->user->getId());
+            $audit->set('user_name', $entity->getPersistence()->getApp()->auth->user->getTitle());
+            $audit->set('user_id', $entity->getPersistence()->getApp()->auth->user->getId());
         }
 
         return $audit;

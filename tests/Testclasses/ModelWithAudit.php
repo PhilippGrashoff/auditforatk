@@ -21,8 +21,11 @@ class ModelWithAudit extends Model
 
         $this->addAuditRefAndAuditHooks();
 
-        $this->addField('name');
-        $this->addField('other_field');
+        $this->addField('string', ['type' => 'string', 'caption' => 'SomeCaption']);
+        $this->addField('text', ['type' => 'text']);
+        $this->addField('integer', ['type' => 'integer']);
+        $this->addField('float', ['type' => 'float']);
+        $this->addField('json', ['type' => 'json']);
         $this->addField('time', ['type' => 'time']);
         $this->addField('date', ['type' => 'date']);
         $this->addField('datetime', ['type' => 'datetime']);

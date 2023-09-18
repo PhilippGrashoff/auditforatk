@@ -55,7 +55,7 @@ class SkipFieldsAndNoAuditTest extends TestCase
     public function testSkippedFieldsAreNotAudited(): void
     {
         $entity = (new ModelWithAudit($this->db))->createEntity();
-        $entity->set('other_field', 'bla');
+        $entity->set('text', 'bla');
         $entity->save();
         self::assertSame(
             2,
@@ -63,16 +63,16 @@ class SkipFieldsAndNoAuditTest extends TestCase
         );
 
         //now disable audit for that field
-        $entity->setSkipFields(['other_field']);
-        $entity->set('other_field', 'du');
+        $entity->setSkipFields(['text']);
+        $entity->set('text', 'du');
         $entity->save();
         self::assertSame(
             2,
             (int)$entity->ref(Audit::class)->action('count')->getOne()
         );
         //re-enable, audit should be created
-        $entity->setSkipFields(['name']);
-        $entity->set('other_field', 'kra');
+        $entity->setSkipFields(['string']);
+        $entity->set('text', 'kra');
         $entity->save();
         self::assertSame(
             3,

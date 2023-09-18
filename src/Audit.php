@@ -35,12 +35,17 @@ class Audit extends SecondaryModel
         // other types if it's some other audit
         $this->addField('type');
 
-        //In this field all relevant data to calculate rendered_output is stored. In case of a field audit, it is
-        //fieldName, oldValue and newValue,
-        $this->addField('data', ['type' => 'json']);
+        //In case of FIELD audit, the name of the field is stored in here.
+        //Other, custom audit types can use this field freely.
+        //The main purpose of this field is to easily filter, e.g. only load audits for a certain field.
+        $this->addField('ident');
+
+        //In this field all relevant data to re-calculate rendered_output is stored. In case of a FIELD audit,
+        //the old and the new value of the field are stored,
+        $this->addField('data', ['type' => 'object']);
 
         //save the user ID for re-rendering
-        $this->addField('user_id');
+        $this->addField('user_id', ['type' => 'integer']);
 
         //store the name of the logged-in user - stored directly for performance and in case users are deleted.
         $this->addField('user_name');

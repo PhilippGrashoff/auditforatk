@@ -23,9 +23,24 @@ class LoggedInUserInAuditTest extends TestCase
         $this->createMigrator(new User($this->db))->create();
     }
 
-    public function testLoggedInUserIsSaved()
+    public function testLoggedInUserIsSaved(): void
     {
         $persistence = $this->getPersistenceWithAppAndAuth();
+        $entity = (new ModelWithAudit($persistence))->createEntity();
+        $entity->save();
+        $audit =  $entity->ref(Audit::class)->loadAny();
+        self::assertSame(
+            "CREATED",
+            $audit->get('type')
+        );
+        self::assertSame(
+            $persistence->getApp()->auth->user->getId(),
+            $audit->get('user_id')
+        );
+        self::assertSame(
+            $persistence->getApp()->auth->user->get('name'),
+            $audit->get('user_name')
+        );
     }
 
     protected function getPersistenceWithAppAndAuth(): Persistence

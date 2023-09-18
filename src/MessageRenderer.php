@@ -24,46 +24,63 @@ class MessageRenderer
     public function renderFieldAudit(Audit $audit): string
     {
         $auditData = $audit->get('data');
-        switch ($auditData['fieldType']) {
+        switch ($auditData->fieldType) {
             case "time":
                 return $this->renderDateTimeFieldAudit($audit, $this->timeFormat);
             case "date":
                 return $this->renderDateTimeFieldAudit($audit, $this->dateFormat);
             case "datetime":
                 return $this->renderDateTimeFieldAudit($audit, $this->dateTimeFormat);
+
+            case 'json':
+            case 'object':
+            return $this->renderJsonFieldAudit($audit);
             default:
-                return $this->renderNormalFieldAudit($audit);
+                return $this->renderScalarFieldAudit($audit);
         }
     }
 
     public function renderDateTimeFieldAudit(Audit $audit, string $format): string
     {
         $auditData = $audit->get('data');
-        if ($auditData['oldValue'] instanceof \DateTimeInterface) {
-            $renderedMessage = 'changed "' . $auditData['fieldName']
-                . '" from "' . $auditData['oldValue']->format($format) . '" to ';
+        if ($auditData->oldValue instanceof \DateTimeInterface) {
+            $renderedMessage = 'changed "' . $audit->get('ident')
+                . '" from "' . $auditData->oldValue->format($format) . '" to ';
         } else {
-            $renderedMessage = 'set "' . $auditData['fieldName'] . ' to ';
+            $renderedMessage = 'set "' . $audit->get('ident') . ' to ';
         }
-        if ($auditData['newValue'] instanceof \DateTimeInterface) {
-            $renderedMessage .= '"' . $auditData['newValue']->format($format) . '"';
+        if ($auditData->newValue instanceof \DateTimeInterface) {
+            $renderedMessage .= '"' . $auditData->newValue->format($format) . '"';
         } else {
-            $renderedMessage .= '"' . $auditData['newValue'] . '"';
+            $renderedMessage .= '"' . $auditData->newValue . '"';
         }
 
         return $renderedMessage;
     }
 
 
-    public function renderNormalFieldAudit(Audit $audit): string
+    public function renderScalarFieldAudit(Audit $audit): string
     {
         $auditData = $audit->get('data');
-        if ($auditData['oldValue']) {
-            $renderedMessage = 'changed "' . $auditData['fieldName'] . '" from "' . $auditData['oldValue'] . '" to ';
+        if ($auditData->oldValue) {
+            $renderedMessage = 'changed "' . $audit->get('ident') . '" from "' . $auditData->oldValue . '" to ';
         } else {
-            $renderedMessage = 'set "' . $auditData['fieldName'] . ' to ';
+            $renderedMessage = 'set "' . $audit->get('ident') . ' to ';
         }
-        $renderedMessage .= '"' . $auditData['newValue'] . '"';
+        $renderedMessage .= '"' . $auditData->newValue . '"';
+
+        return $renderedMessage;
+    }
+
+    public function renderJsonFieldAudit(Audit $audit): string
+    {
+        $auditData = $audit->get('data');
+        if ($auditData->oldValue) {
+            $renderedMessage = 'changed "' . $audit->get('ident') . '" from "' . $auditData->oldValue . '" to ';
+        } else {
+            $renderedMessage = 'set "' . $audit->get('ident') . ' to ';
+        }
+        $renderedMessage .= '"' . $auditData->newValue . '"';
 
         return $renderedMessage;
     }
@@ -76,22 +93,22 @@ class MessageRenderer
         $auditData = $audit->get('data');
         $oldEntity = null;
         $newEntity = null;
-        if ($auditData['oldValue']) {
-            $oldEntity = $entity->refModel($auditData['fieldName']);
+        if ($auditData->oldValue) {
+            $oldEntity = $entity->refModel($audit->get('ident'));
             $oldEntity->onlyFields = [$oldEntity->idField, $oldEntity->titleField];
-            $oldEntity->load($auditData['oldValue']);
+            $oldEntity->load($auditData->oldValue);
         }
-        if ($auditData['newValue']) {
-            $newEntity = $entity->refModel($auditData['fieldName']);
+        if ($auditData->newValue) {
+            $newEntity = $entity->refModel($audit->get('ident'));
             $newEntity->onlyFields = [$newEntity->idField, $newEntity->titleField];
-            $newEntity->load($entity->get($auditData['newValue']));
+            $newEntity->load($entity->get($auditData->newValue));
         }
         if ($oldEntity) {
-            $renderedMessage = 'changed "' . $auditData['fieldName'] . '" from "' . $oldEntity->getTitle() . '" to ';
+            $renderedMessage = 'changed "' . $audit->get('ident') . '" from "' . $oldEntity->getTitle() . '" to ';
         } else {
-            $renderedMessage = 'set "' . $auditData['fieldName'] . ' to ';
+            $renderedMessage = 'set "' . $audit->get('ident') . ' to ';
         }
-        $renderedMessage .= '"' . ($newEntity ? $newEntity->getTitle() : $auditData['newValue']) . '"';
+        $renderedMessage .= '"' . ($newEntity ? $newEntity->getTitle() : $auditData->newValue) . '"';
 
         return $renderedMessage;
     }
