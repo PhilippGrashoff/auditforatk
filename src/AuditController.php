@@ -5,7 +5,7 @@ namespace PhilippR\Atk4\Audit;
 use Atk4\Core\DiContainerTrait;
 use Atk4\Core\Exception;
 use Atk4\Data\Model;
-use Atk4\Data\Reference\HasOne;
+use stdClass;
 
 class AuditController
 {
@@ -15,6 +15,9 @@ class AuditController
 
     protected MessageRenderer $messageRenderer;
 
+    /**
+     * @param array<string,mixed> $defaults
+     */
     public function __construct(array $defaults = [])
     {
         $this->setDefaults($defaults);
@@ -22,8 +25,6 @@ class AuditController
     }
 
     /**
-     *  Save any change in Model Fields to Audit
-     *
      * @param Model $entity
      * @return void
      * @throws Exception
@@ -112,27 +113,20 @@ class AuditController
     protected function addFieldChangedAudit(Model $entity, string $fieldName, mixed $dirtyValue): void
     {
         $audit = $this->getAuditForEntity($entity);
-        $this->setFieldDataToAudit($audit, $entity, $fieldName, $dirtyValue, 'FIELD');
-        $audit->set('rendered_message', $this->messageRenderer->renderFieldAudit($audit, $entity));
-        $audit->save();
-    }
-
-    protected function setFieldDataToAudit(
-        Audit $audit,
-        Model $entity,
-        string $fieldName,
-        mixed $dirtyValue,
-        string $type
-    ): void {
-        $audit->set('type', $type);
+        $audit->set('type', 'FIELD');
         $audit->set('ident', $fieldName);
-        $data = new \stdClass();
+        $data = new stdClass();
         $data->fieldType = $entity->getField($fieldName)->type;
         $data->oldValue = $dirtyValue;
         $data->newValue = $entity->get($fieldName);
         $audit->set('data', $data);
+        $audit->set('rendered_message', $this->messageRenderer->renderFieldAudit($audit, $entity));
+        $audit->save();
     }
 
+    /**
+     * @return bool
+     */
     protected function noAudit(): bool
     {
         //add possibility to skip auditing in ENV, e.g. to speed up tests
@@ -143,6 +137,12 @@ class AuditController
         return false;
     }
 
+    /**
+     * @param Model $entity
+     * @return Audit
+     * @throws Exception
+     * @throws \Atk4\Data\Exception
+     */
     protected function getAuditForEntity(Model $entity): Audit
     {
         $audit = (new Audit($entity->getPersistence()))->createEntity();

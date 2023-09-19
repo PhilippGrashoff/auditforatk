@@ -2,8 +2,10 @@
 
 namespace PhilippR\Atk4\Audit;
 
+use Atk4\Data\Exception;
 use Atk4\Data\Model;
 use Atk4\Data\Reference\HasOne;
+use DateTimeInterface;
 
 class MessageRenderer
 {
@@ -12,16 +14,33 @@ class MessageRenderer
     public string $dateFormat = 'Y-m-d';
     public string $dateTimeFormat = 'Y-m-d H:i';
 
+    /**
+     * @param Audit $audit
+     * @param Model $entity
+     * @return string
+     */
     public function renderCreatedMessage(Audit $audit, Model $entity): string
     {
         return 'created ' . $entity->getModelCaption();
     }
 
+    /**
+     * @param Audit $audit
+     * @param Model $entity
+     * @return string
+     */
     public function renderDeletedMessage(Audit $audit, Model $entity): string
     {
         return 'deleted ' . $entity->getModelCaption();
     }
 
+    /**
+     * @param Audit $audit
+     * @param Model $entity
+     * @return string
+     * @throws \Atk4\Core\Exception
+     * @throws Exception
+     */
     public function renderFieldAudit(Audit $audit, Model $entity): string
     {
         $auditData = $audit->get('data');
@@ -40,32 +59,33 @@ class MessageRenderer
             $this->renderKeyValueAudit($audit, $entity);
         }
 
-        switch ($auditData->fieldType) {
-            case "time":
-                return $this->renderDateTimeFieldAudit($audit, $entity, $this->timeFormat);
-            case "date":
-                return $this->renderDateTimeFieldAudit($audit, $entity, $this->dateFormat);
-            case "datetime":
-                return $this->renderDateTimeFieldAudit($audit, $entity, $this->dateTimeFormat);
-
-            case 'json':
-            case 'object':
-                return $this->renderJsonFieldAudit($audit, $entity);
-            default:
-                return $this->renderScalarFieldAudit($audit, $entity);
-        }
+        return match ($auditData->fieldType) {
+            "time" => $this->renderDateTimeFieldAudit($audit, $entity, $this->timeFormat),
+            "date" => $this->renderDateTimeFieldAudit($audit, $entity, $this->dateFormat),
+            "datetime" => $this->renderDateTimeFieldAudit($audit, $entity, $this->dateTimeFormat),
+            'json', 'object' => $this->renderJsonFieldAudit($audit, $entity),
+            default => $this->renderScalarFieldAudit($audit, $entity),
+        };
     }
 
+    /**
+     * @param Audit $audit
+     * @param Model $entity
+     * @param string $format
+     * @return string
+     * @throws Exception
+     * @throws \Atk4\Core\Exception
+     */
     public function renderDateTimeFieldAudit(Audit $audit, Model $entity, string $format): string
     {
         $auditData = $audit->get('data');
-        if ($auditData->oldValue instanceof \DateTimeInterface) {
+        if ($auditData->oldValue instanceof DateTimeInterface) {
             $renderedMessage = 'changed "' . $entity->getField($audit->get('ident'))->getCaption()
                 . '" from "' . $auditData->oldValue->format($format) . '" to ';
         } else {
             $renderedMessage = 'set "' . $entity->getField($audit->get('ident'))->getCaption() . ' to ';
         }
-        if ($auditData->newValue instanceof \DateTimeInterface) {
+        if ($auditData->newValue instanceof DateTimeInterface) {
             $renderedMessage .= '"' . $auditData->newValue->format($format) . '"';
         } else {
             $renderedMessage .= '"' . $auditData->newValue . '"';
@@ -74,7 +94,13 @@ class MessageRenderer
         return $renderedMessage;
     }
 
-
+    /**
+     * @param Audit $audit
+     * @param Model $entity
+     * @return string
+     * @throws Exception
+     * @throws \Atk4\Core\Exception
+     */
     public function renderScalarFieldAudit(Audit $audit, Model $entity): string
     {
         $auditData = $audit->get('data');
@@ -89,6 +115,13 @@ class MessageRenderer
         return $renderedMessage;
     }
 
+    /**
+     * @param Audit $audit
+     * @param Model $entity
+     * @return string
+     * @throws Exception
+     * @throws \Atk4\Core\Exception
+     */
     public function renderJsonFieldAudit(Audit $audit, Model $entity): string
     {
         $auditData = $audit->get('data');
@@ -103,8 +136,16 @@ class MessageRenderer
         return $renderedMessage;
     }
 
-    //as only the ID is stored, we need to load the referenced records to get their title in order to make
-    //human-readable Audit
+    /**
+     * as only the ID is stored, we need to load the referenced records to get their title in order to make
+     * human-readable Audit
+     *
+     * @param Audit $audit
+     * @param Model $entity
+     * @return string
+     * @throws Exception
+     * @throws \Atk4\Core\Exception
+     */
     public function renderHasOneAudit(Audit $audit, Model $entity): string
     {
         $auditData = $audit->get('data');
@@ -132,13 +173,19 @@ class MessageRenderer
         return $renderedMessage;
     }
 
-
+    /**
+     * @param Audit $audit
+     * @param Model $entity
+     * @return string
+     * @throws Exception
+     * @throws \Atk4\Core\Exception
+     */
     protected function renderKeyValueAudit(Audit $audit, Model $entity): string
     {
         $values = $entity->getField($audit->get('ident'))->values;
         $auditData = $audit->get('data');
         $oldValueTitle = $newValueTitle = '';
-        
+
         if (isset($values[$auditData->oldValue])) {
             $oldValueTitle = $values[$auditData->oldValue];
         }
