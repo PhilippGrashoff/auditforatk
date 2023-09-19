@@ -1,4 +1,5 @@
 # auditforatk
+[![codecov](https://codecov.io/gh/PhilippGrashoff/audit/branch/main/graph/badge.svg)](https://codecov.io/gh/PhilippGrashoff/auditforatk)
 
 This is an extension for [atk4/data](https://github.com/atk4/data). It is used to create a human-readable audit of changes made to models and other actions. It is NOT meant to add the ability to undo changes.
 
