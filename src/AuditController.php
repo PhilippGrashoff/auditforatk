@@ -24,6 +24,7 @@ class AuditController
     /**
      *  Save any change in Model Fields to Audit
      *
+     * @param Model $entity
      * @return void
      * @throws Exception
      * @throws \Atk4\Data\Exception
@@ -42,6 +43,7 @@ class AuditController
     }
 
     /**
+     * @param Model $entity
      * @return void
      * @throws Exception
      * @throws \Atk4\Data\Exception
@@ -61,7 +63,7 @@ class AuditController
     /**
      *  Save any change in Model Fields to Audit
      *
-     * @param Model<Model|AuditTrait> $entity
+     * @param Model<Model> $entity
      * @return void
      * @throws Exception
      * @throws \Atk4\Data\Exception
@@ -86,14 +88,15 @@ class AuditController
             if ($dirtyValue === $entity->get($fieldName)) {
                 continue;
             }
-            //string types do not get any additional audit value regarding null vs enpty string. Hence strings are
-            //loosely using == only
+            /*
+            //string types do not get any additional audit value regarding null vs empty string.
+            // Hence, strings are loosely compared using == only
             if($field->type == 'string' || $field->type == 'text') {
                 if ($dirtyValue == $entity->get($fieldName)) {
                     continue;
                 }
             }
-
+            */
             $this->addFieldChangedAudit($entity, $fieldName, $dirtyValue);
         }
     }
@@ -108,42 +111,10 @@ class AuditController
      */
     protected function addFieldChangedAudit(Model $entity, string $fieldName, mixed $dirtyValue): void
     {
-        //hasOne references
-        if (
-            $entity->hasReference($fieldName)
-            && $entity->getModel()->getReference($fieldName) instanceof HasOne
-        ) {
-            $this->hasOneAudit($entity, $fieldName, $dirtyValue);
-        } //any other field
-        else {
-            $this->normalFieldAudit($entity, $fieldName, $dirtyValue);
-        }
-    }
-
-    /**
-     *  used to create an array containing the audit data for a normal field
-     */
-    protected function normalFieldAudit(Model $entity, string $fieldName, mixed $dirtyValue): Audit
-    {
         $audit = $this->getAuditForEntity($entity);
         $this->setFieldDataToAudit($audit, $entity, $fieldName, $dirtyValue, 'FIELD');
-        $audit->set('rendered_message', $this->messageRenderer->renderFieldAudit($audit));
+        $audit->set('rendered_message', $this->messageRenderer->renderFieldAudit($audit, $entity));
         $audit->save();
-
-        return $audit;
-    }
-
-    /**
-     * used to create an array containing the audit data for a one-to-many relation field
-     */
-    protected function hasOneAudit(Model $entity, string $fieldName, $dirtyValue): Audit
-    {
-        $audit = $this->getAuditForEntity($entity);
-        $this->setFieldDataToAudit($audit, $entity, $fieldName, $dirtyValue, 'FIELD_HASONE');
-        $audit->set('rendered_message', $this->messageRenderer->renderHasOneAudit($audit));
-        $audit->save();
-
-        return $audit;
     }
 
     protected function setFieldDataToAudit(

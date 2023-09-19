@@ -87,6 +87,7 @@ class FieldsAuditTest extends TestCase
         );
     }
 
+    /*
     public function testEmptyStringsVsNullNoAudit(): void
     {
         $entity = (new ModelWithAudit($this->db))->createEntity();
@@ -111,6 +112,7 @@ class FieldsAuditTest extends TestCase
             (new Audit($this->db))->action('count')->getOne()
         );
     }
+    */
 
     public function testAuditRemainsAfterDeletingModel(): void
     {

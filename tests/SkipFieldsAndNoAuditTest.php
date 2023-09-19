@@ -79,4 +79,18 @@ class SkipFieldsAndNoAuditTest extends TestCase
             (int)$entity->ref(Audit::class)->action('count')->getOne()
         );
     }
+
+    public function testNoAuditInEnv() {
+        $_ENV['noAudit'] = true;
+        $entity = (new ModelWithAudit($this->db))->createEntity();
+        $entity->set('text', 'bla');
+        $entity->save();
+        $clonedEntity = clone $entity;
+        $entity->delete();
+        self::assertSame(
+            0,
+            (int)$clonedEntity->ref(Audit::class)->action('count')->getOne()
+        );
+        $_ENV['noAudit'] = false;
+    }
 }
