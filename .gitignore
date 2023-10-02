@@ -3,3 +3,4 @@ vendor
 .phpunit.result.cache
 build
 coverage
+composer.lock

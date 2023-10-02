@@ -145,16 +145,17 @@ class AuditController
      */
     protected function getAuditForEntity(Model $entity): Audit
     {
-        $audit = (new Audit($entity->getPersistence()))->createEntity();
+        $persistence = $entity->getModel()->getPersistence();
+        $audit = (new Audit($persistence))->createEntity();
         $entity->assertIsEntity();
         $audit->setParentEntity($entity);
         if (
-            method_exists($entity->getPersistence(), 'getApp')
-            && property_exists($entity->getPersistence()->getApp(), 'auth')
-            && $entity->getPersistence()->getApp()->auth->user->isLoaded()
+            method_exists($persistence, 'getApp')
+            && property_exists($persistence->getApp(), 'auth')
+            && $persistence->getApp()->auth->user->isLoaded()
         ) {
-            $audit->set('user_name', $entity->getPersistence()->getApp()->auth->user->getTitle());
-            $audit->set('user_id', $entity->getPersistence()->getApp()->auth->user->getId());
+            $audit->set('user_name', $persistence->getApp()->auth->user->getTitle());
+            $audit->set('user_id', $persistence->getApp()->auth->user->getId());
         }
 
         return $audit;

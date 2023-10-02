@@ -4,7 +4,6 @@ namespace PhilippR\Atk4\Audit\Tests;
 
 use Atk4\Data\Persistence\Sql;
 use Atk4\Data\Schema\TestCase;
-use Cassandra\Date;
 use DateTime;
 use PhilippR\Atk4\Audit\Audit;
 use PhilippR\Atk4\Audit\Tests\Testclasses\ModelWithAudit;
@@ -264,7 +263,7 @@ class FieldsAuditTest extends TestCase
             json_encode($audit->get('data'))
         );
     }
-    
+
     public function testValuesFieldWithIntegerKeyAudit(): void
     {
         $entity = (new ModelWithAudit($this->db))->createEntity();
@@ -300,7 +299,7 @@ class FieldsAuditTest extends TestCase
             json_encode($audit->get('data'))
         );
     }
-    
+
     public function testValuesFieldWithStringKeyAudit(): void
     {
         $entity = (new ModelWithAudit($this->db))->createEntity();

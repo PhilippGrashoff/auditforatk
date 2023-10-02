@@ -28,7 +28,7 @@ class LoggedInUserInAuditTest extends TestCase
         $persistence = $this->getPersistenceWithAppAndAuth();
         $entity = (new ModelWithAudit($persistence))->createEntity();
         $entity->save();
-        $audit =  $entity->ref(Audit::class)->loadAny();
+        $audit = $entity->ref(Audit::class)->loadAny();
         self::assertSame(
             "CREATED",
             $audit->get('type')
