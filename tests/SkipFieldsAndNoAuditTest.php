@@ -80,7 +80,7 @@ class SkipFieldsAndNoAuditTest extends TestCase
         );
     }
 
-    public function testNoAuditInEnv()
+    public function testNoAuditInEnv(): void
     {
         $_ENV['noAudit'] = true;
         $entity = (new ModelWithAudit($this->db))->createEntity();

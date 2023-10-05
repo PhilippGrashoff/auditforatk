@@ -78,7 +78,7 @@ class AuditController
             $field = $entity->getField($fieldName);
             //only audit non system fields and fields that go to persistence
             if (
-                in_array($fieldName, $entity->skipFieldsFromAudit)
+                in_array($fieldName, $entity->getNoAuditFields())
                 || !$entity->hasField($fieldName)
                 || $fieldName === $entity->idField
                 || $field->neverPersist
@@ -145,9 +145,9 @@ class AuditController
      */
     protected function getAuditForEntity(Model $entity): Audit
     {
+        $entity->assertIsEntity();
         $persistence = $entity->getModel()->getPersistence();
         $audit = (new Audit($persistence))->createEntity();
-        $entity->assertIsEntity();
         $audit->setParentEntity($entity);
         if (
             method_exists($persistence, 'getApp')

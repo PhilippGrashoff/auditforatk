@@ -51,6 +51,6 @@ class ModelWithAudit extends Model
 
     public function setSkipFields(array $fields): void
     {
-        $this->skipFieldsFromAudit = $fields;
+        $this->noAuditFields = $fields;
     }
 }

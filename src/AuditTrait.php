@@ -28,7 +28,7 @@ trait AuditTrait
      * @var array<int, string>
      * A list of field names that should be excluded from audit
      */
-    public array $skipFieldsFromAudit = [];
+    protected array $noAuditFields = [];
 
     /**
      * add this method to Model::init() to quickly set up reference and hooks
@@ -77,5 +77,13 @@ trait AuditTrait
         );
 
         return $ref;
+    }
+
+    protected function addNoAuditFields(array $fieldnames): void {
+        $this->noAuditFields = array_merge($this->noAuditFields, $fieldnames);
+    }
+
+    public function getNoAuditFields(): array {
+        return $this->noAuditFields;
     }
 }
