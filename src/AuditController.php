@@ -56,7 +56,7 @@ class AuditController
         }
 
         $audit = $this->getAuditForEntity($entity);
-        $audit->set('type', 'DELETED');
+        $audit->set('type', Audit::TYPE_DELETED);
         $audit->set('rendered_message', $this->messageRenderer->renderDeletedMessage($audit, $entity));
         $audit->save();
     }
@@ -113,7 +113,7 @@ class AuditController
     protected function addFieldChangedAudit(Model $entity, string $fieldName, mixed $dirtyValue): void
     {
         $audit = $this->getAuditForEntity($entity);
-        $audit->set('type', 'FIELD');
+        $audit->set('type', Audit::TYPE_FIELD);
         $audit->set('ident', $fieldName);
         $data = new stdClass();
         $data->fieldType = $entity->getField($fieldName)->type;

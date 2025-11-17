@@ -31,7 +31,7 @@ class FieldsAuditTest extends TestCase
             (new Audit($this->db))->action('count')->getOne()
         );
         self::assertSame(
-            'CREATED',
+            Audit::TYPE_CREATED,
             $entity->ref(Audit::class)->loadAny()->get('type'),
         );
 
@@ -42,7 +42,7 @@ class FieldsAuditTest extends TestCase
             (new Audit($this->db))->action('count')->getOne()
         );
         self::assertSame(
-            'DELETED',
+            Audit::TYPE_DELETED,
             $clonedEntity->ref(Audit::class)->loadAny()->get('type'),
         );
     }
@@ -234,7 +234,7 @@ class FieldsAuditTest extends TestCase
         $entity->save();
         $audit = $entity->ref(Audit::class)->loadAny();
         $expected = new \stdClass();
-        $expected->fieldType = 'integer';
+        $expected->fieldType = 'bigint';
         $expected->oldValue = null;
         $expected->newValue = $user1->getId();
         self::assertSame(

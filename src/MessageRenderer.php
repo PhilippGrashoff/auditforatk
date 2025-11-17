@@ -21,7 +21,7 @@ class MessageRenderer
      */
     public function renderCreatedMessage(Audit $audit, Model $entity): string
     {
-        return 'created ' . $entity->getModelCaption();
+        return 'created ' . $entity->getModel()->getModelCaption();
     }
 
     /**
@@ -31,7 +31,7 @@ class MessageRenderer
      */
     public function renderDeletedMessage(Audit $audit, Model $entity): string
     {
-        return 'deleted ' . $entity->getModelCaption();
+        return 'deleted ' . $entity->getModel()->getModelCaption();
     }
 
     /**
@@ -152,12 +152,12 @@ class MessageRenderer
         $oldEntity = null;
         $newEntity = null;
         if ($auditData->oldValue) {
-            $oldEntity = $entity->refModel($audit->get('ident'));
+            $oldEntity = $entity->getModel()->getReference($audit->get('ident'))->createTheirModel();
             $oldEntity->onlyFields = [$oldEntity->idField, $oldEntity->titleField];
             $oldEntity = $oldEntity->load($auditData->oldValue);
         }
         if ($auditData->newValue) {
-            $newEntity = $entity->refModel($audit->get('ident'));
+            $newEntity = $entity->getModel()->getReference($audit->get('ident'))->createTheirModel();
             $newEntity->onlyFields = [$newEntity->idField, $newEntity->titleField];
             $newEntity = $newEntity->load($auditData->newValue);
         }
@@ -166,7 +166,7 @@ class MessageRenderer
             $renderedMessage = 'changed "' . $entity->getField($audit->get('ident'))->getCaption()
                 . '" from "' . $oldEntity->getTitle() . '" to ';
         } else {
-            $renderedMessage = 'set "' . $entity->getField($audit->get('ident'))->getCaption() . ' to ';
+            $renderedMessage = 'set "' . $entity->getField($audit->get('ident'))->getCaption() . '" to ';
         }
         $renderedMessage .= '"' . ($newEntity !== null ? $newEntity->getTitle() : $auditData->newValue) . '"';
 

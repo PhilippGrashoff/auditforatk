@@ -43,7 +43,7 @@ trait AuditTrait
                     return (new Audit($this->getPersistence()))
                         ->addCondition('model_class', get_class($this));
                 },
-                'theirField' => 'model_id'
+                'theirField' => 'entity_id'
             ]
         );
 

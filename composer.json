@@ -5,14 +5,14 @@
   "prefer-stable": true,
   "require": {
     "php": "8.*",
-    "atk4/data": "5.*",
-    "philippgrashoff/secondarymodelforatk": "5.*",
-    "philippgrashoff/atkdatamodeltraits": "5.*"
+    "atk4/data": "6.*",
+    "philippgrashoff/secondarymodelforatk": "6.*",
+    "philippgrashoff/atkdatamodeltraits": "6.*"
   },
   "require-dev": {
-    "phpunit/phpunit": "^9.5.25",
-    "phpstan/phpstan": "1.*",
-    "atk4/ui": "5.*"
+    "phpunit/phpunit": "12.*",
+    "phpstan/phpstan": "2.*",
+    "atk4/ui": "6.*"
   },
   "autoload": {
     "psr-4": {

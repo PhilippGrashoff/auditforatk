@@ -16,6 +16,10 @@ class Audit extends SecondaryModel
 
     public $table = 'audit';
 
+    public const TYPE_FIELD = 'FIELD';
+    public const TYPE_CREATED = 'CREATED';
+    public const TYPE_DELETED = 'DELETED';
+
     /**
      * @return void
      * @throws Exception
