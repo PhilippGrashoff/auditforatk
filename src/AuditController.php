@@ -28,7 +28,7 @@ class AuditController
      * @param Model $entity
      * @return void
      * @throws Exception
-     * @throws \Atk4\Data\Exception
+     * @throws \Atk4\Data\Exception|\Throwable
      */
     public function addCreatedAudit(Model $entity): void
     {
@@ -38,7 +38,7 @@ class AuditController
 
         $entity->assertIsEntity();
         $audit = $this->getAuditForEntity($entity);
-        $audit->set('type', 'CREATED');
+        $audit->set('type', Audit::TYPE_CREATED);
         $audit->set('rendered_message', $this->messageRenderer->renderCreatedMessage($audit, $entity));
         $audit->save();
     }
@@ -47,7 +47,7 @@ class AuditController
      * @param Model $entity
      * @return void
      * @throws Exception
-     * @throws \Atk4\Data\Exception
+     * @throws \Atk4\Data\Exception|\Throwable
      */
     public function addDeletedAudit(Model $entity): void
     {
@@ -67,7 +67,7 @@ class AuditController
      * @param Model<Model> $entity
      * @return void
      * @throws Exception
-     * @throws \Atk4\Data\Exception
+     * @throws \Atk4\Data\Exception|\Throwable
      */
     public function addFieldsChangedAudit(Model $entity): void
     {
@@ -78,13 +78,20 @@ class AuditController
             $field = $entity->getField($fieldName);
             //only audit non system fields and fields that go to persistence
             if (
-                in_array($fieldName, $entity->getNoAuditFields())
-                || !$entity->hasField($fieldName)
+                !$entity->hasField($fieldName)
                 || $fieldName === $entity->idField
                 || $field->neverPersist
             ) {
                 continue;
             }
+
+            if (
+                method_exists($entity, 'getNoAuditFields')
+                && in_array($fieldName, $entity->getNoAuditFields())
+            ) {
+                continue;
+            }
+
             //check if any "real" value change happened
             if ($dirtyValue === $entity->get($fieldName)) {
                 continue;
@@ -108,7 +115,7 @@ class AuditController
      * @param mixed $dirtyValue
      * @return void
      * @throws Exception
-     * @throws \Atk4\Data\Exception
+     * @throws \Atk4\Data\Exception|\Throwable
      */
     protected function addFieldChangedAudit(Model $entity, string $fieldName, mixed $dirtyValue): void
     {
@@ -129,7 +136,7 @@ class AuditController
      */
     protected function noAudit(): bool
     {
-        //add possibility to skip auditing in ENV, e.g. to speed up tests
+        //add the possibility to skip auditing in ENV, e.g., to speed up tests
         if (isset($_ENV['noAudit']) && $_ENV['noAudit']) {
             return true;
         }
@@ -141,7 +148,7 @@ class AuditController
      * @param Model $entity
      * @return Audit
      * @throws Exception
-     * @throws \Atk4\Data\Exception
+     * @throws \Atk4\Data\Exception|\Throwable
      */
     protected function getAuditForEntity(Model $entity): Audit
     {
