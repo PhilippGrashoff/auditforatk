@@ -12,7 +12,7 @@ How the final audit looks like is up to you - you can implement the rendering yo
 15:17 Another User    changed "name" to "Germany".
 
 2023-04-21
-13:13 YetAnotherUser  set "contitent" to "America".
+13:13 YetAnotherUser  set "continent" to "America".
 15:19 Another User    changed "continent" to "Europe".
 15:19 Another User    enabled periodic info emails for this country.
 ```
