@@ -5,6 +5,7 @@ namespace PhilippR\Atk4\Audit;
 use Atk4\Data\Exception;
 use Atk4\Data\Model;
 use Atk4\Data\Reference\HasOne;
+use DateTime;
 use DateTimeInterface;
 
 class MessageRenderer
@@ -27,7 +28,7 @@ class MessageRenderer
      */
     public function renderCreatedMessage(Audit $audit, Model $entity): string
     {
-        return $this->renderTemplate($this->createdTemplate, ['{modelCaption}' => $entity->getModel()->getModelCaption()]);
+        return $this->renderTemplate($this->createdTemplate, ['modelCaption' => $entity->getModel()->getModelCaption()]);
     }
 
     /**
@@ -37,7 +38,7 @@ class MessageRenderer
      */
     public function renderDeletedMessage(Audit $audit, Model $entity): string
     {
-        return $this->renderTemplate($this->deletedTemplate, ['{modelCaption}' => $entity->getModel()->getModelCaption()]);
+        return $this->renderTemplate($this->deletedTemplate, ['modelCaption' => $entity->getModel()->getModelCaption()]);
 
     }
 
@@ -103,10 +104,13 @@ class MessageRenderer
         $auditData = $audit->getData();
         $fieldCaption = $entity->getField($audit->get('ident'))->getCaption();
 
-        if ($auditData->oldValue instanceof DateTimeInterface) {
-            $oldValue = $auditData->oldValue->format($format);
-            $newValue = $auditData->newValue instanceof DateTimeInterface
-                ? $auditData->newValue->format($format)
+        $oldDateTime = DateTime::createFromFormat(DATE_ATOM, (string)$auditData->oldValue);
+        $newDateTime = DateTime::createFromFormat(DATE_ATOM, (string)$auditData->newValue);
+
+        if ($oldDateTime instanceof DateTimeInterface) {
+            $oldValue = $oldDateTime->format($format);
+            $newValue = $newDateTime instanceof DateTimeInterface
+                ? $newDateTime->format($format)
                 : (string)$auditData->newValue;
 
             return $this->renderTemplate($this->changedTemplate, [
@@ -115,8 +119,8 @@ class MessageRenderer
                 'newValue' => $newValue
             ]);
         } else {
-            $newValue = $auditData->newValue instanceof DateTimeInterface
-                ? $auditData->newValue->format($format)
+            $newValue = $newDateTime instanceof DateTimeInterface
+                ? $newDateTime->format($format)
                 : (string)$auditData->newValue;
 
             return $this->renderTemplate($this->setTemplate, [
