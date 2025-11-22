@@ -50,7 +50,7 @@ class MessageRenderer
      */
     public function renderFieldAudit(Audit $audit, Model $entity): string
     {
-        $auditData = $audit->get('data');
+        $auditData = $audit->getData();
         //hasOne references
         if (
             $entity->hasReference($audit->get('ident'))
@@ -100,7 +100,7 @@ class MessageRenderer
      */
     public function renderDateTimeFieldAudit(Audit $audit, Model $entity, string $format): string
     {
-        $auditData = $audit->get('data');
+        $auditData = $audit->getData();
         $fieldCaption = $entity->getField($audit->get('ident'))->getCaption();
 
         if ($auditData->oldValue instanceof DateTimeInterface) {
@@ -135,7 +135,7 @@ class MessageRenderer
      */
     public function renderScalarFieldAudit(Audit $audit, Model $entity): string
     {
-        $auditData = $audit->get('data');
+        $auditData = $audit->getData();
         $fieldCaption = $entity->getField($audit->get('ident'))->getCaption();
 
         if ($auditData->oldValue) {
@@ -161,7 +161,7 @@ class MessageRenderer
      */
     public function renderJsonFieldAudit(Audit $audit, Model $entity): string
     {
-        $auditData = $audit->get('data');
+        $auditData = $audit->getData();
         $fieldCaption = $entity->getField($audit->get('ident'))->getCaption();
 
         if ($auditData->oldValue) {
@@ -216,7 +216,7 @@ class MessageRenderer
      */
     public function renderHasOneAudit(Audit $audit, Model $entity): string
     {
-        $auditData = $audit->get('data');
+        $auditData = $audit->getData();
         $referenceIdent = $audit->get('ident');
         $fieldCaption = $entity->getField($audit->get('ident'))->getCaption();
 
@@ -251,7 +251,7 @@ class MessageRenderer
     protected function renderKeyValueAudit(Audit $audit, Model $entity): string
     {
         $values = $entity->getField($audit->get('ident'))->values;
-        $auditData = $audit->get('data');
+        $auditData = $audit->getData();
         $fieldCaption = $entity->getField($audit->get('ident'))->getCaption();
 
         $oldValueTitle = $values[$auditData->oldValue] ?? '';
