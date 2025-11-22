@@ -23,3 +23,4 @@ In this example, the last entry is not about a field change, but audits a custom
 * `AuditTrait`: This Trait is added to any Model which should be audited. It sets the necessary hooks to create audits on creation, any field change and on deletion. Fields can be excluded from audit for each model.
 * `AuditController`: Contains all logic how an Audit should be created. If you want other Audits than mere field audits, you need to extend this class to fit your purposes.
 * `MessageRenderer`: Highly coupled with `AuditController`. It takes care of rendering a human-readable message for each Audit. You can extend this class to have a different output format, e.g. have rendered HTML in the rendered message. The result is saved in `Audit` `rendered_message` field.
+* `SkipFieldsCOntroller`: A controller used in `AuditController`. It contains the logic which fields should be excluded from audit. Extend to your own needs.

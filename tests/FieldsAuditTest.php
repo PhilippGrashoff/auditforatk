@@ -142,9 +142,10 @@ class FieldsAuditTest extends TestCase
         $entity->save();
 
         $audit = $entity->ref(Audit::class)->loadAny();
+        $data = $audit->getData();
         self::assertSame(
-            $now->format('Hisv'),
-            $audit->get('data')->newValue->format('Hisv')
+            $now->format('His'),
+            (new DateTime($audit->getData()->newValue))->format('His')
         );
 
         sleep(1);
@@ -153,12 +154,12 @@ class FieldsAuditTest extends TestCase
         $entity->save();
         $audit = $entity->ref(Audit::class)->loadAny();
         self::assertSame(
-            $now->format('Hisv'),
-            $audit->get('data')->oldValue->format('Hisv')
+            $now->format('His'),
+            (new DateTime($audit->getData()->oldValue))->format('His')
         );
         self::assertSame(
-            $newNow->format('Hisv'),
-            $audit->get('data')->newValue->format('Hisv')
+            $newNow->format('His'),
+            (new DateTime($audit->getData()->newValue))->format('His')
         );
     }
 
@@ -172,7 +173,7 @@ class FieldsAuditTest extends TestCase
         $audit = $entity->ref(Audit::class)->loadAny();
         self::assertSame(
             $now->format(DATE_ATOM),
-            $audit->get('data')->newValue->format(DATE_ATOM)
+            (new DateTime($audit->getData()->newValue))->format(DATE_ATOM)
         );
 
         sleep(1);
@@ -182,11 +183,11 @@ class FieldsAuditTest extends TestCase
         $audit = $entity->ref(Audit::class)->loadAny();
         self::assertSame(
             $now->format(DATE_ATOM),
-            $audit->get('data')->oldValue->format(DATE_ATOM)
+            (new DateTime($audit->getData()->oldValue))->format(DATE_ATOM)
         );
         self::assertSame(
             $newNow->format(DATE_ATOM),
-            $audit->get('data')->newValue->format(DATE_ATOM)
+            (new DateTime($audit->getData()->newValue))->format(DATE_ATOM)
         );
     }
 
@@ -200,7 +201,7 @@ class FieldsAuditTest extends TestCase
         $audit = $entity->ref(Audit::class)->loadAny();
         self::assertSame(
             $now->format('Ymd'),
-            $audit->get('data')->newValue->format('Ymd')
+            (new DateTime($audit->getData()->newValue))->format('Ymd')
         );
 
         sleep(1);
@@ -210,11 +211,11 @@ class FieldsAuditTest extends TestCase
         $audit = $entity->ref(Audit::class)->loadAny();
         self::assertSame(
             $now->format('Ymd'),
-            $audit->get('data')->oldValue->format('Ymd')
+            (new DateTime($audit->getData()->oldValue))->format('Ymd')
         );
         self::assertSame(
             $yesterday->format('Ymd'),
-            $audit->get('data')->newValue->format('Ymd')
+            (new DateTime($audit->getData()->newValue))->format('Ymd')
         );
     }
 
@@ -239,7 +240,7 @@ class FieldsAuditTest extends TestCase
         $expected->newValue = $user1->getId();
         self::assertSame(
             json_encode($expected),
-            json_encode($audit->get('data'))
+            json_encode($audit->getData())
         );
 
 
@@ -250,7 +251,7 @@ class FieldsAuditTest extends TestCase
         $expected->newValue = $user2->getId();
         self::assertSame(
             json_encode($expected),
-            json_encode($audit->get('data'))
+            json_encode($audit->getData())
         );
 
         $entity->set('user_id', null);
@@ -260,7 +261,7 @@ class FieldsAuditTest extends TestCase
         $expected->newValue = null;
         self::assertEquals(
             json_encode($expected),
-            json_encode($audit->get('data'))
+            json_encode($audit->getData())
         );
     }
 
@@ -276,7 +277,7 @@ class FieldsAuditTest extends TestCase
         $expected->newValue = 0;
         self::assertSame(
             json_encode($expected),
-            json_encode($audit->get('data'))
+            json_encode($audit->getData())
         );
 
         $entity->set('values_integer_key', 1);
@@ -286,7 +287,7 @@ class FieldsAuditTest extends TestCase
         $expected->newValue = 1;
         self::assertSame(
             json_encode($expected),
-            json_encode($audit->get('data'))
+            json_encode($audit->getData())
         );
 
         $entity->set('values_integer_key', null);
@@ -296,7 +297,7 @@ class FieldsAuditTest extends TestCase
         $expected->newValue = null;
         self::assertSame(
             json_encode($expected),
-            json_encode($audit->get('data'))
+            json_encode($audit->getData())
         );
     }
 
@@ -312,7 +313,7 @@ class FieldsAuditTest extends TestCase
         $expected->newValue = 'first';
         self::assertSame(
             json_encode($expected),
-            json_encode($audit->get('data'))
+            json_encode($audit->getData())
         );
 
         $entity->set('values_string_key', 'second');
@@ -322,7 +323,7 @@ class FieldsAuditTest extends TestCase
         $expected->newValue = 'second';
         self::assertSame(
             json_encode($expected),
-            json_encode($audit->get('data'))
+            json_encode($audit->getData())
         );
 
         $entity->set('values_string_key', null);
@@ -332,7 +333,7 @@ class FieldsAuditTest extends TestCase
         $expected->newValue = null;
         self::assertSame(
             json_encode($expected),
-            json_encode($audit->get('data'))
+            json_encode($audit->getData())
         );
     }
 }

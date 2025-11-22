@@ -29,10 +29,10 @@ class Audit extends SecondaryModel
     {
         parent::init();
 
-        //add created date field and hook to automatically set value.
+        //add a created date field and hook to automatically set value.
         $this->addCreatedDateFieldAndHook();
 
-        //the type of the audit, can be freely defined.
+        //the type of the audit can be freely defined.
         // "FIELD" if a model's field value was changed,
         // "CREATED" if a model record was created,
         // "DELETED" if a model record was deleted,
@@ -46,7 +46,9 @@ class Audit extends SecondaryModel
 
         //In this field all relevant data to re-calculate rendered_output is stored. In case of a FIELD audit,
         //the old and the new value of the field are stored,
-        $this->addField('data', ['type' => 'object']);
+        //TODO Currently, there is an very ugly hack used to save data as JSON in persistence. This should be properly
+        //handled by a custom field type.
+        $this->addField('data');
 
         //save the user ID for re-rendering
         $this->addField('user_id', ['type' => 'integer']);
@@ -62,5 +64,15 @@ class Audit extends SecondaryModel
 
         //newest Audits go first
         $this->setOrder(['created_date' => 'desc']);
+    }
+
+    public function setData(object $data): void
+    {
+        $this->set('data', json_encode($data));
+    }
+
+    public function getData(): ?\stdClass
+    {
+        return json_decode($this->get('data'));
     }
 }

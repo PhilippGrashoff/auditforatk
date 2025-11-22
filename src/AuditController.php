@@ -13,7 +13,10 @@ class AuditController
 
     public string $messageRendererClass = MessageRenderer::class;
 
+    public string $skipFieldsControllerClass = SkipFieldsController::class;
+
     protected MessageRenderer $messageRenderer;
+    protected SkipFieldsController $skipFieldsController;
 
     /**
      * @param array<string,mixed> $defaults
@@ -22,6 +25,7 @@ class AuditController
     {
         $this->setDefaults($defaults);
         $this->messageRenderer = new $this->messageRendererClass();
+        $this->skipFieldsController = new $this->skipFieldsControllerClass();
     }
 
     /**
@@ -75,27 +79,14 @@ class AuditController
             return;
         }
         foreach ($entity->dirtyBeforeSave as $fieldName => $dirtyValue) {
-            $field = $entity->getField($fieldName);
-            //only audit non system fields and fields that go to persistence
-            if (
-                !$entity->hasField($fieldName)
-                || $fieldName === $entity->idField
-                || $field->neverPersist
-            ) {
-                continue;
-            }
-
-            if (
-                method_exists($entity, 'getNoAuditFields')
-                && in_array($fieldName, $entity->getNoAuditFields())
-            ) {
-                continue;
-            }
-
             //check if any "real" value change happened
             if ($dirtyValue === $entity->get($fieldName)) {
                 continue;
             }
+            if ($this->skipFieldsController->skipFieldFromAudit($entity, $fieldName)) {
+                continue;
+            }
+
             /*
             //string types do not get any additional audit value regarding null vs empty string.
             // Hence, strings are loosely compared using == only
@@ -126,7 +117,13 @@ class AuditController
         $data->fieldType = $entity->getField($fieldName)->type;
         $data->oldValue = $dirtyValue;
         $data->newValue = $entity->get($fieldName);
-        $audit->set('data', $data);
+        if ($data->oldValue instanceof \DateTimeInterface) {
+            $data->oldValue = $data->oldValue->format(DATE_ATOM);
+        }
+        if ($data->newValue instanceof \DateTimeInterface) {
+            $data->newValue = $data->newValue->format(DATE_ATOM);
+        }
+        $audit->setData($data);
         $audit->set('rendered_message', $this->messageRenderer->renderFieldAudit($audit, $entity));
         $audit->save();
     }

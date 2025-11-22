@@ -14,6 +14,12 @@ class MessageRenderer
     public string $dateFormat = 'Y-m-d';
     public string $dateTimeFormat = 'Y-m-d H:i';
 
+    // Message templates with named placeholders
+    public string $changedTemplate = 'changed "{fieldName}" from "{oldValue}" to "{newValue}"';
+    public string $setTemplate = 'set "{fieldName}" to "{newValue}"';
+    public string $createdTemplate = 'created {modelCaption}';
+    public string $deletedTemplate = 'deleted {modelCaption}';
+
     /**
      * @param Audit $audit
      * @param Model $entity
@@ -21,7 +27,7 @@ class MessageRenderer
      */
     public function renderCreatedMessage(Audit $audit, Model $entity): string
     {
-        return 'created ' . $entity->getModel()->getModelCaption();
+        return $this->renderTemplate($this->createdTemplate, ['{modelCaption}' => $entity->getModel()->getModelCaption()]);
     }
 
     /**
@@ -31,7 +37,8 @@ class MessageRenderer
      */
     public function renderDeletedMessage(Audit $audit, Model $entity): string
     {
-        return 'deleted ' . $entity->getModel()->getModelCaption();
+        return $this->renderTemplate($this->deletedTemplate, ['{modelCaption}' => $entity->getModel()->getModelCaption()]);
+
     }
 
     /**
@@ -60,12 +67,27 @@ class MessageRenderer
         }
 
         return match ($auditData->fieldType) {
-            "time" => $this->renderDateTimeFieldAudit($audit, $entity, $this->timeFormat),
-            "date" => $this->renderDateTimeFieldAudit($audit, $entity, $this->dateFormat),
-            "datetime" => $this->renderDateTimeFieldAudit($audit, $entity, $this->dateTimeFormat),
+            'time' => $this->renderDateTimeFieldAudit($audit, $entity, $this->timeFormat),
+            'date' => $this->renderDateTimeFieldAudit($audit, $entity, $this->dateFormat),
+            'datetime' => $this->renderDateTimeFieldAudit($audit, $entity, $this->dateTimeFormat),
             'json', 'object' => $this->renderJsonFieldAudit($audit, $entity),
             default => $this->renderScalarFieldAudit($audit, $entity),
         };
+    }
+
+    /**
+     * Replace named placeholders in template with actual values
+     *
+     * @param string $template
+     * @param array<string, string> $replacements
+     * @return string
+     */
+    protected function renderTemplate(string $template, array $replacements): string
+    {
+        foreach ($replacements as $placeholder => $value) {
+            $template = str_replace('{' . $placeholder . '}', (string)$value, $template);
+        }
+        return $template;
     }
 
     /**
@@ -79,19 +101,29 @@ class MessageRenderer
     public function renderDateTimeFieldAudit(Audit $audit, Model $entity, string $format): string
     {
         $auditData = $audit->get('data');
-        if ($auditData->oldValue instanceof DateTimeInterface) {
-            $renderedMessage = 'changed "' . $entity->getField($audit->get('ident'))->getCaption()
-                . '" from "' . $auditData->oldValue->format($format) . '" to ';
-        } else {
-            $renderedMessage = 'set "' . $entity->getField($audit->get('ident'))->getCaption() . ' to ';
-        }
-        if ($auditData->newValue instanceof DateTimeInterface) {
-            $renderedMessage .= '"' . $auditData->newValue->format($format) . '"';
-        } else {
-            $renderedMessage .= '"' . $auditData->newValue . '"';
-        }
+        $fieldCaption = $entity->getField($audit->get('ident'))->getCaption();
 
-        return $renderedMessage;
+        if ($auditData->oldValue instanceof DateTimeInterface) {
+            $oldValue = $auditData->oldValue->format($format);
+            $newValue = $auditData->newValue instanceof DateTimeInterface
+                ? $auditData->newValue->format($format)
+                : (string)$auditData->newValue;
+
+            return $this->renderTemplate($this->changedTemplate, [
+                'fieldName' => $fieldCaption,
+                'oldValue' => $oldValue,
+                'newValue' => $newValue
+            ]);
+        } else {
+            $newValue = $auditData->newValue instanceof DateTimeInterface
+                ? $auditData->newValue->format($format)
+                : (string)$auditData->newValue;
+
+            return $this->renderTemplate($this->setTemplate, [
+                'fieldName' => $fieldCaption,
+                'newValue' => $newValue
+            ]);
+        }
     }
 
     /**
@@ -104,15 +136,20 @@ class MessageRenderer
     public function renderScalarFieldAudit(Audit $audit, Model $entity): string
     {
         $auditData = $audit->get('data');
-        if ($auditData->oldValue) {
-            $renderedMessage = 'changed "' . $entity->getField($audit->get('ident'))->getCaption()
-                . '" from "' . $auditData->oldValue . '" to ';
-        } else {
-            $renderedMessage = 'set "' . $entity->getField($audit->get('ident'))->getCaption() . ' to ';
-        }
-        $renderedMessage .= '"' . $auditData->newValue . '"';
+        $fieldCaption = $entity->getField($audit->get('ident'))->getCaption();
 
-        return $renderedMessage;
+        if ($auditData->oldValue) {
+            return $this->renderTemplate($this->changedTemplate, [
+                'fieldName' => $fieldCaption,
+                'oldValue' => (string)$auditData->oldValue,
+                'newValue' => (string)$auditData->newValue
+            ]);
+        } else {
+            return $this->renderTemplate($this->setTemplate, [
+                'fieldName' => $fieldCaption,
+                'newValue' => (string)$auditData->newValue
+            ]);
+        }
     }
 
     /**
@@ -125,15 +162,46 @@ class MessageRenderer
     public function renderJsonFieldAudit(Audit $audit, Model $entity): string
     {
         $auditData = $audit->get('data');
-        if ($auditData->oldValue) {
-            $renderedMessage = 'changed "' . $entity->getField($audit->get('ident'))->getCaption() . '" from "'
-                . json_encode($auditData->oldValue) . '" to ';
-        } else {
-            $renderedMessage = 'set "' . $entity->getField($audit->get('ident'))->getCaption() . ' to ';
-        }
-        $renderedMessage .= '"' . ($auditData->newValue ? json_encode($auditData->newValue) : '') . '"';
+        $fieldCaption = $entity->getField($audit->get('ident'))->getCaption();
 
-        return $renderedMessage;
+        if ($auditData->oldValue) {
+            $oldValue = json_encode($auditData->oldValue);
+            $newValue = $auditData->newValue ? json_encode($auditData->newValue) : '';
+
+            return $this->renderTemplate($this->changedTemplate, [
+                'fieldName' => $fieldCaption,
+                'oldValue' => (string)$oldValue,
+                'newValue' => (string)$newValue
+            ]);
+        } else {
+            $newValue = $auditData->newValue ? json_encode($auditData->newValue) : '';
+
+            return $this->renderTemplate($this->setTemplate, [
+                'fieldName' => $fieldCaption,
+                'newValue' => (string)$newValue
+            ]);
+        }
+    }
+
+    /**
+     * Load a referenced entity with only ID and title fields for efficient display
+     *
+     * @param Model $entity
+     * @param string $referenceIdent
+     * @param mixed $value
+     * @return Model|null
+     * @throws Exception
+     * @throws \Atk4\Core\Exception
+     */
+    protected function loadReferencedEntityForDisplay(Model $entity, string $referenceIdent, mixed $value): ?Model
+    {
+        if (!$value) {
+            return null;
+        }
+
+        $referencedModel = $entity->getModel()->getReference($referenceIdent)->createTheirModel();
+        $referencedModel->onlyFields = [$referencedModel->idField, $referencedModel->titleField];
+        return $referencedModel->load($value);
     }
 
     /**
@@ -149,28 +217,28 @@ class MessageRenderer
     public function renderHasOneAudit(Audit $audit, Model $entity): string
     {
         $auditData = $audit->get('data');
-        $oldEntity = null;
-        $newEntity = null;
-        if ($auditData->oldValue) {
-            $oldEntity = $entity->getModel()->getReference($audit->get('ident'))->createTheirModel();
-            $oldEntity->onlyFields = [$oldEntity->idField, $oldEntity->titleField];
-            $oldEntity = $oldEntity->load($auditData->oldValue);
-        }
-        if ($auditData->newValue) {
-            $newEntity = $entity->getModel()->getReference($audit->get('ident'))->createTheirModel();
-            $newEntity->onlyFields = [$newEntity->idField, $newEntity->titleField];
-            $newEntity = $newEntity->load($auditData->newValue);
-        }
+        $referenceIdent = $audit->get('ident');
+        $fieldCaption = $entity->getField($audit->get('ident'))->getCaption();
+
+        $oldEntity = $this->loadReferencedEntityForDisplay($entity, $referenceIdent, $auditData->oldValue);
+        $newEntity = $this->loadReferencedEntityForDisplay($entity, $referenceIdent, $auditData->newValue);
 
         if ($oldEntity !== null) {
-            $renderedMessage = 'changed "' . $entity->getField($audit->get('ident'))->getCaption()
-                . '" from "' . $oldEntity->getTitle() . '" to ';
-        } else {
-            $renderedMessage = 'set "' . $entity->getField($audit->get('ident'))->getCaption() . '" to ';
-        }
-        $renderedMessage .= '"' . ($newEntity !== null ? $newEntity->getTitle() : $auditData->newValue) . '"';
+            $newValue = $newEntity !== null ? (string)$newEntity->getTitle() : (string)$auditData->newValue;
 
-        return $renderedMessage;
+            return $this->renderTemplate($this->changedTemplate, [
+                'fieldName' => $fieldCaption,
+                'oldValue' => (string)$oldEntity->getTitle(),
+                'newValue' => $newValue
+            ]);
+        } else {
+            $newValue = $newEntity !== null ? (string)$newEntity->getTitle() : (string)$auditData->newValue;
+
+            return $this->renderTemplate($this->setTemplate, [
+                'fieldName' => $fieldCaption,
+                'newValue' => $newValue
+            ]);
+        }
     }
 
     /**
@@ -184,23 +252,22 @@ class MessageRenderer
     {
         $values = $entity->getField($audit->get('ident'))->values;
         $auditData = $audit->get('data');
-        $oldValueTitle = $newValueTitle = '';
+        $fieldCaption = $entity->getField($audit->get('ident'))->getCaption();
 
-        if (isset($values[$auditData->oldValue])) {
-            $oldValueTitle = $values[$auditData->oldValue];
-        }
-        if (isset($values[$auditData->newValue])) {
-            $newValueTitle = $values[$auditData->newValue];
-        }
+        $oldValueTitle = $values[$auditData->oldValue] ?? '';
+        $newValueTitle = $values[$auditData->newValue] ?? '';
 
         if ($auditData->oldValue) {
-            $renderedMessage = 'changed "' . $entity->getField($audit->get('ident'))->getCaption()
-                . '" from "' . $oldValueTitle . '" to ';
+            return $this->renderTemplate($this->changedTemplate, [
+                'fieldName' => $fieldCaption,
+                'oldValue' => (string)$oldValueTitle,
+                'newValue' => (string)$newValueTitle
+            ]);
         } else {
-            $renderedMessage = 'set "' . $entity->getField($audit->get('ident'))->getCaption() . ' to ';
+            return $this->renderTemplate($this->setTemplate, [
+                'fieldName' => $fieldCaption,
+                'newValue' => (string)$newValueTitle
+            ]);
         }
-        $renderedMessage .= '"' . $newValueTitle . '"';
-
-        return $renderedMessage;
     }
 }

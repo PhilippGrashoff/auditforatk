@@ -1,6 +1,4 @@
-<?php
-
-declare(strict_types=1);
+<?php declare(strict_types=1);
 
 namespace PhilippR\Atk4\Audit;
 
@@ -8,6 +6,8 @@ use Atk4\Data\Model;
 use Atk4\Data\Reference;
 
 /**
+ * Use this trait to directly add audit logic to your models.
+ *
  * @extends Model<Model>
  */
 trait AuditTrait
@@ -26,7 +26,7 @@ trait AuditTrait
 
     /**
      * @var array<int, string>
-     * A list of field names that should be excluded from audit
+     * A list of field names that should be excluded from audit.
      */
     protected array $noAuditFields = [];
 
@@ -79,11 +79,13 @@ trait AuditTrait
         return $ref;
     }
 
-    protected function addNoAuditFields(array $fieldnames): void {
+    protected function addNoAuditFields(array $fieldnames): void
+    {
         $this->noAuditFields = array_merge($this->noAuditFields, $fieldnames);
     }
 
-    public function getNoAuditFields(): array {
-        return $this->noAuditFields;
+    public function skipFieldFromAudit(string $fieldName): bool
+    {
+        return in_array($fieldName, $this->noAuditFields);
     }
 }
