@@ -79,11 +79,6 @@ trait AuditTrait
         return $ref;
     }
 
-    protected function addNoAuditFields(array $fieldnames): void
-    {
-        $this->noAuditFields = array_merge($this->noAuditFields, $fieldnames);
-    }
-
     public function skipFieldFromAudit(string $fieldName): bool
     {
         return in_array($fieldName, $this->noAuditFields);
