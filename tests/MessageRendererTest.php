@@ -88,4 +88,67 @@ class MessageRendererTest extends TestCase
         $this->assertStringContainsString('SomeCaption', $result);
         $this->assertStringContainsString('test value', $result);
     }
+
+    public function testRenderJsonFieldAuditWithOldValue(): void
+    {
+        $modelWithAudit = (new ModelWithAudit($this->db))
+            ->createEntity();
+
+        // Set initial JSON value
+        $initialValue = ['key' => 'initial', 'number' => 42];
+        $modelWithAudit->set('json', $initialValue);
+        $modelWithAudit->save();
+
+        // Change JSON value to test the selected code path
+        $newValue = ['key' => 'updated', 'number' => 99];
+        $modelWithAudit->set('json', $newValue);
+        $modelWithAudit->save();
+
+        // Get the latest audit record (the change audit, not the initial set audit)
+        $audit = $modelWithAudit->ref(Audit::class)->loadAny();
+
+        $result = $this->messageRenderer->renderFieldAudit($audit, $modelWithAudit);
+
+        // Verify the message contains expected elements
+        $this->assertStringContainsString('Json', $result); // Field caption
+        $this->assertStringContainsString('changed', $result); // Uses changedTemplate
+        $this->assertStringContainsString('from', $result); // changedTemplate format
+        $this->assertStringContainsString('to', $result); // changedTemplate format
+
+        // Verify JSON values are properly encoded in the message
+        $expectedOldValue = json_encode($initialValue);
+        $expectedNewValue = json_encode($newValue);
+        $this->assertStringContainsString($expectedOldValue, $result);
+        $this->assertStringContainsString($expectedNewValue, $result);
+    }
+
+    public function testRenderJsonFieldAuditWithNullNewValue(): void
+    {
+        $modelWithAudit = (new ModelWithAudit($this->db))
+            ->createEntity();
+
+        // Set initial JSON value
+        $initialValue = ['key' => 'initial', 'data' => ['nested' => 'value']];
+        $modelWithAudit->set('json', $initialValue);
+        $modelWithAudit->save();
+
+        // Set to null to test the newValue ? json_encode($auditData->newValue) : '' part
+        $modelWithAudit->set('json', null);
+        $modelWithAudit->save();
+
+        $audit = $modelWithAudit->ref(Audit::class)->loadAny();
+
+        $result = $this->messageRenderer->renderFieldAudit($audit, $modelWithAudit);
+
+        // Verify the message structure
+        $this->assertStringContainsString('Json', $result);
+        $this->assertStringContainsString('changed', $result);
+        $this->assertStringContainsString('from', $result);
+        $this->assertStringContainsString('to', $result);
+
+        // Verify the old value is JSON encoded and new value is empty string
+        $expectedOldValue = json_encode($initialValue);
+        $this->assertStringContainsString($expectedOldValue, $result);
+        $this->assertStringContainsString('" to ""', $result); // Empty new value
+    }
 }
