@@ -88,15 +88,15 @@ class AuditController
                 continue;
             }
 
-            /*
             //string types do not get any additional audit value regarding null vs empty string.
             // Hence, strings are loosely compared using == only
-            if($field->type == 'string' || $field->type == 'text') {
+            $field = $entity->getField($fieldName);
+            if($field->type === 'string' || $field->type === 'text') {
                 if ($dirtyValue == $entity->get($fieldName)) {
                     continue;
                 }
             }
-            */
+
             $this->addFieldChangedAudit($entity, $fieldName, $dirtyValue);
         }
     }
@@ -164,6 +164,7 @@ class AuditController
 
     /**
      * Implement in child implementation to your needs
+     * @param Persistence $persistence
      * @return Model|null
      */
     protected function getUser(Persistence $persistence): ?Model

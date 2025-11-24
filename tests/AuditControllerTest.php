@@ -10,7 +10,7 @@ use PhilippR\Atk4\Audit\Tests\Testclasses\ModelWithAudit;
 use PhilippR\Atk4\Audit\Tests\Testclasses\User;
 
 
-class FieldsAuditTest extends TestCase
+class AuditControllerTest extends TestCase
 {
 
     protected function setUp(): void
@@ -334,6 +334,120 @@ class FieldsAuditTest extends TestCase
         self::assertSame(
             json_encode($expected),
             json_encode($audit->getData())
+        );
+    }
+
+    public function testEmptyStringsVsNullNoAudit(): void
+    {
+        $entity = (new ModelWithAudit($this->db))->createEntity();
+        $entity->set('string', null);
+        $entity->save();
+        self::assertEquals(
+            1, // Only created audit
+            (new Audit($this->db))->action('count')->getOne()
+        );
+
+        // Setting empty string should not create additional audit due to loose comparison
+        $entity->set('string', '');
+        $entity->save();
+        self::assertEquals(
+            1, // Still only created audit
+            (new Audit($this->db))->action('count')->getOne()
+        );
+
+        // Setting back to null should not create additional audit due to loose comparison
+        $entity->set('string', null);
+        $entity->save();
+        self::assertEquals(
+            1, // Still only created audit
+            (new Audit($this->db))->action('count')->getOne()
+        );
+    }
+
+    public function testTextFieldEmptyVsNullNoAudit(): void
+    {
+        $entity = (new ModelWithAudit($this->db))->createEntity();
+        $entity->set('text', null);
+        $entity->save();
+        self::assertEquals(
+            1, // Only created audit
+            (new Audit($this->db))->action('count')->getOne()
+        );
+
+        // Setting empty string should not create additional audit due to loose comparison
+        $entity->set('text', '');
+        $entity->save();
+        self::assertEquals(
+            1, // Still only created audit
+            (new Audit($this->db))->action('count')->getOne()
+        );
+
+        // Setting back to null should not create additional audit due to loose comparison
+        $entity->set('text', null);
+        $entity->save();
+        self::assertEquals(
+            1, // Still only created audit
+            (new Audit($this->db))->action('count')->getOne()
+        );
+    }
+
+    public function testStringFieldActualChangeCreatesAudit(): void
+    {
+        $entity = (new ModelWithAudit($this->db))->createEntity();
+        $entity->save();
+        $entity->set('string', 'initial value');
+        $entity->save();
+        self::assertEquals(
+            2, // Created audit + field change audit
+            (new Audit($this->db))->action('count')->getOne()
+        );
+
+        // Actual change should create audit even for string fields
+        $entity->set('string', 'changed value');
+        $entity->save();
+        self::assertEquals(
+            3, // Created audit + 2 field change audits
+            (new Audit($this->db))->action('count')->getOne()
+        );
+    }
+
+    public function testTextFieldActualChangeCreatesAudit(): void
+    {
+        $entity = (new ModelWithAudit($this->db))->createEntity();
+        $entity->save();
+        $entity->set('text', 'initial text');
+        $entity->save();
+        self::assertEquals(
+            2, // Created audit + field change audit
+            (new Audit($this->db))->action('count')->getOne()
+        );
+
+        // Actual change should create audit even for text fields
+        $entity->set('text', 'changed text');
+        $entity->save();
+        self::assertEquals(
+            3, // Created audit + 2 field change audits
+            (new Audit($this->db))->action('count')->getOne()
+        );
+    }
+
+    public function testNonStringFieldStrictComparison(): void
+    {
+        $entity = (new ModelWithAudit($this->db))->createEntity();
+        $entity->set('integer', 0);
+        $entity->save();
+        self::assertEquals(
+            2, // Created audit + field change audit
+            (new Audit($this->db))->action('count')->getOne()
+        );
+
+        // For non-string fields, strict comparison should apply
+        // This tests that the string/text special case doesn't affect other field types
+        $entity->set('integer', 0); // Same value
+        $entity->save();
+        self::assertEquals(
+            2, // No additional audit for same value
+            (new Audit($this->db))->action('count')->getOne()
         );
     }
 }
