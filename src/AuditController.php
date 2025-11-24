@@ -5,6 +5,7 @@ namespace PhilippR\Atk4\Audit;
 use Atk4\Core\DiContainerTrait;
 use Atk4\Core\Exception;
 use Atk4\Data\Model;
+use Atk4\Data\Persistence;
 use stdClass;
 
 class AuditController
@@ -153,15 +154,20 @@ class AuditController
         $persistence = $entity->getModel()->getPersistence();
         $audit = (new Audit($persistence))->createEntity();
         $audit->setParentEntity($entity);
-        if (
-            method_exists($persistence, 'getApp')
-            && property_exists($persistence->getApp(), 'auth')
-            && $persistence->getApp()->auth->user->isLoaded()
-        ) {
-            $audit->set('user_name', $persistence->getApp()->auth->user->getTitle());
-            $audit->set('user_id', $persistence->getApp()->auth->user->getId());
+        if ($user = $this->getUser($persistence)) {
+            $audit->set('user_name', $user->getTitle());
+            $audit->set('user_id', $user->getId());
         }
 
         return $audit;
+    }
+
+    /**
+     * Implement in child implementation to your needs
+     * @return Model|null
+     */
+    protected function getUser(Persistence $persistence): ?Model
+    {
+        return null;
     }
 }
