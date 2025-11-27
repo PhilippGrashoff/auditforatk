@@ -16,6 +16,8 @@ class AuditController
 
     public string $skipFieldsControllerClass = SkipFieldsController::class;
 
+    public string $auditModelClass = Audit::class;
+
     protected MessageRenderer $messageRenderer;
     protected SkipFieldsController $skipFieldsController;
 
@@ -91,7 +93,7 @@ class AuditController
             //string types do not get any additional audit value regarding null vs empty string.
             // Hence, strings are loosely compared using == only
             $field = $entity->getField($fieldName);
-            if($field->type === 'string' || $field->type === 'text') {
+            if ($field->type === 'string' || $field->type === 'text') {
                 if ($dirtyValue == $entity->get($fieldName)) {
                     continue;
                 }
@@ -152,7 +154,7 @@ class AuditController
     {
         $entity->assertIsEntity();
         $persistence = $entity->getModel()->getPersistence();
-        $audit = (new Audit($persistence))->createEntity();
+        $audit = (new $this->auditModelClass($persistence))->createEntity();
         $audit->setParentEntity($entity);
         if ($user = $this->getUser($persistence)) {
             $audit->set('user_name', $user->getTitle());
