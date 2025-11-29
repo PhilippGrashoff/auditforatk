@@ -86,7 +86,8 @@ class AuditController
             if ($dirtyValue === $entity->get($fieldName)) {
                 continue;
             }
-            if ($this->skipFieldsController->getFieldAuditType($entity, $fieldName) === FieldAuditTypeController::TYPE_SKIP) {
+            $auditType = $this->skipFieldsController->getFieldAuditType($entity, $fieldName);
+            if ($auditType === FieldAuditTypeController::TYPE_SKIP) {
                 continue;
             }
 
@@ -98,11 +99,11 @@ class AuditController
                     continue;
                 }
             }
-            if ($this->skipFieldsController->getFieldAuditType($entity, $fieldName) === FieldAuditTypeController::TYPE_NORMAL) {
+            if ($auditType === FieldAuditTypeController::TYPE_NORMAL) {
                 $this->addFieldChangedAudit($entity, $fieldName, $dirtyValue);
                 continue;
             }
-            if ($this->skipFieldsController->getFieldAuditType($entity, $fieldName) === FieldAuditTypeController::TYPE_NO_VALUE) {
+            if ($auditType === FieldAuditTypeController::TYPE_NO_VALUE) {
                 $this->addFieldChangedAudit($entity, $fieldName, $dirtyValue, false);
             }
         }
