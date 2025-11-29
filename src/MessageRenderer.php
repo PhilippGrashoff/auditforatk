@@ -65,7 +65,7 @@ class MessageRenderer
             is_array($entity->getField($audit->get('ident'))->values)
             && count($entity->getField($audit->get('ident'))->values) > 0
         ) {
-            $this->renderKeyValueAudit($audit, $entity);
+            return $this->renderKeyValueAudit($audit, $entity);
         }
 
         return match ($auditData->fieldType) {
@@ -156,7 +156,7 @@ class MessageRenderer
         $auditData = $audit->getData();
         $fieldCaption = $entity->getField($audit->get('ident'))->getCaption();
 
-        if ($auditData->oldValue) {
+        if (strlen((string)$auditData->oldValue) > 0) {
             return $this->renderTemplate($this->changedWithOldValueTemplate, [
                 'fieldName' => $fieldCaption,
                 'oldValue' => (string)$auditData->oldValue,
@@ -208,8 +208,6 @@ class MessageRenderer
      * @param string $referenceIdent
      * @param mixed $value
      * @return Model|null
-     * @throws Exception
-     * @throws \Atk4\Core\Exception
      */
     protected function loadReferencedEntityForDisplay(Model $entity, string $referenceIdent, mixed $value): ?Model
     {
@@ -275,7 +273,7 @@ class MessageRenderer
         $oldValueTitle = $values[$auditData->oldValue] ?? '';
         $newValueTitle = $values[$auditData->newValue] ?? '';
 
-        if ($auditData->oldValue) {
+        if (strlen((string)$auditData->oldValue) > 0) {
             return $this->renderTemplate($this->changedWithOldValueTemplate, [
                 'fieldName' => $fieldCaption,
                 'oldValue' => (string)$oldValueTitle,

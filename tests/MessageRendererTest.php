@@ -63,10 +63,11 @@ class MessageRendererTest extends TestCase
 
         $modelWithAudit = (new ModelWithAudit($this->db))
             ->createEntity()
-            ->set('user_id', $user->getId())
+            ->save();
+        $modelWithAudit->set('user_id', $user->getId())
             ->save();
 
-        $audit = $modelWithAudit->ref(Audit::class)->loadAny();
+        $audit = $modelWithAudit->ref(Audit::class)->setOrder('id', 'DESC')->loadAny();
 
         $result = $this->messageRenderer->renderFieldAudit($audit, $modelWithAudit);
 
