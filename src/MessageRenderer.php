@@ -16,8 +16,9 @@ class MessageRenderer
     public string $dateTimeFormat = 'Y-m-d H:i';
 
     // Message templates with named placeholders
-    public string $changedTemplate = 'changed "{fieldName}" from "{oldValue}" to "{newValue}"';
-    public string $setTemplate = 'set "{fieldName}" to "{newValue}"';
+    public string $changedWithOldValueTemplate = 'changed "{fieldName}" from "{oldValue}" to "{newValue}"';
+    public string $changedNoOldValueTemplate = 'set "{fieldName}" to "{newValue}"';
+    public string $changedWithoutValueAuditTemplate = 'changed "{fieldName}"';
     public string $createdTemplate = 'created {modelCaption}';
     public string $deletedTemplate = 'deleted {modelCaption}';
 
@@ -77,7 +78,20 @@ class MessageRenderer
     }
 
     /**
-     * Replace named placeholders in template with actual values
+     * @param Audit $audit
+     * @param Model $entity
+     * @return string
+     * @throws Exception
+     * @throws \Atk4\Core\Exception
+     */
+    public function renderFieldAuditWithoutValues(Audit $audit, Model $entity): string
+    {
+        $fieldCaption = $entity->getField($audit->get('ident'))->getCaption();
+        return $this->renderTemplate($this->changedWithoutValueAuditTemplate, ['fieldName' => $fieldCaption]);
+    }
+
+    /**
+     * Replace named placeholders in the template with actual values
      *
      * @param string $template
      * @param array<string, string> $replacements
@@ -113,7 +127,7 @@ class MessageRenderer
                 ? $newDateTime->format($format)
                 : (string)$auditData->newValue;
 
-            return $this->renderTemplate($this->changedTemplate, [
+            return $this->renderTemplate($this->changedWithOldValueTemplate, [
                 'fieldName' => $fieldCaption,
                 'oldValue' => $oldValue,
                 'newValue' => $newValue
@@ -123,7 +137,7 @@ class MessageRenderer
                 ? $newDateTime->format($format)
                 : (string)$auditData->newValue;
 
-            return $this->renderTemplate($this->setTemplate, [
+            return $this->renderTemplate($this->changedNoOldValueTemplate, [
                 'fieldName' => $fieldCaption,
                 'newValue' => $newValue
             ]);
@@ -143,13 +157,13 @@ class MessageRenderer
         $fieldCaption = $entity->getField($audit->get('ident'))->getCaption();
 
         if ($auditData->oldValue) {
-            return $this->renderTemplate($this->changedTemplate, [
+            return $this->renderTemplate($this->changedWithOldValueTemplate, [
                 'fieldName' => $fieldCaption,
                 'oldValue' => (string)$auditData->oldValue,
                 'newValue' => (string)$auditData->newValue
             ]);
         } else {
-            return $this->renderTemplate($this->setTemplate, [
+            return $this->renderTemplate($this->changedNoOldValueTemplate, [
                 'fieldName' => $fieldCaption,
                 'newValue' => (string)$auditData->newValue
             ]);
@@ -172,7 +186,7 @@ class MessageRenderer
             $oldValue = json_encode($auditData->oldValue);
             $newValue = $auditData->newValue ? json_encode($auditData->newValue) : '';
 
-            return $this->renderTemplate($this->changedTemplate, [
+            return $this->renderTemplate($this->changedWithOldValueTemplate, [
                 'fieldName' => $fieldCaption,
                 'oldValue' => (string)$oldValue,
                 'newValue' => (string)$newValue
@@ -180,7 +194,7 @@ class MessageRenderer
         } else {
             $newValue = $auditData->newValue ? json_encode($auditData->newValue) : '';
 
-            return $this->renderTemplate($this->setTemplate, [
+            return $this->renderTemplate($this->changedNoOldValueTemplate, [
                 'fieldName' => $fieldCaption,
                 'newValue' => (string)$newValue
             ]);
@@ -230,7 +244,7 @@ class MessageRenderer
         if ($oldEntity !== null) {
             $newValue = $newEntity !== null ? (string)$newEntity->getTitle() : (string)$auditData->newValue;
 
-            return $this->renderTemplate($this->changedTemplate, [
+            return $this->renderTemplate($this->changedWithOldValueTemplate, [
                 'fieldName' => $fieldCaption,
                 'oldValue' => (string)$oldEntity->getTitle(),
                 'newValue' => $newValue
@@ -238,7 +252,7 @@ class MessageRenderer
         } else {
             $newValue = $newEntity !== null ? (string)$newEntity->getTitle() : (string)$auditData->newValue;
 
-            return $this->renderTemplate($this->setTemplate, [
+            return $this->renderTemplate($this->changedNoOldValueTemplate, [
                 'fieldName' => $fieldCaption,
                 'newValue' => $newValue
             ]);
@@ -262,13 +276,13 @@ class MessageRenderer
         $newValueTitle = $values[$auditData->newValue] ?? '';
 
         if ($auditData->oldValue) {
-            return $this->renderTemplate($this->changedTemplate, [
+            return $this->renderTemplate($this->changedWithOldValueTemplate, [
                 'fieldName' => $fieldCaption,
                 'oldValue' => (string)$oldValueTitle,
                 'newValue' => (string)$newValueTitle
             ]);
         } else {
-            return $this->renderTemplate($this->setTemplate, [
+            return $this->renderTemplate($this->changedNoOldValueTemplate, [
                 'fieldName' => $fieldCaption,
                 'newValue' => (string)$newValueTitle
             ]);

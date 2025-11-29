@@ -151,4 +151,64 @@ class MessageRendererTest extends TestCase
         $this->assertStringContainsString($expectedOldValue, $result);
         $this->assertStringContainsString('" to ""', $result); // Empty new value
     }
+
+    public function testRenderFieldAuditWithoutValues(): void
+    {
+        $entity = (new ModelWithAudit($this->db))->createEntity();
+
+        // Create an audit record for the password field
+        $audit = (new Audit($this->db))->createEntity();
+        $audit->set('ident', 'password');
+
+        // Test the renderFieldAuditWithoutValues method
+        $result = $this->messageRenderer->renderFieldAuditWithoutValues($audit, $entity);
+
+        // The password field doesn't have an explicit caption, so it should use the field name
+        $expectedCaption = $entity->getField('password')->getCaption();
+        $expectedResult = 'changed "' . $expectedCaption . '"';
+
+        self::assertSame($expectedResult, $result);
+    }
+
+    public function testRenderDateTimeFieldAuditWithNullNewValue(): void
+    {
+        $entity = (new ModelWithAudit($this->db))->createEntity();
+
+        // Create an audit record for a datetime field with null newValue
+        $audit = (new Audit($this->db))->createEntity();
+        $audit->set('ident', 'datetime');
+
+        // Create audit data with a valid old DateTime value but null new value
+        $auditData = new \stdClass();
+        $auditData->oldValue = null;
+        $auditData->newValue = null;
+        $audit->setData($auditData);
+
+        // Test the renderDateTimeFieldAudit method
+        $result = $this->messageRenderer->renderDateTimeFieldAudit($audit, $entity, 'Y-m-d H:i');
+
+        // Verify that null newValue is cast to an empty string
+        $this->assertStringContainsString('set "Datetime" to ""', $result);
+    }
+
+    public function testRenderDateTimeFieldAuditWithOldDateTimeAndNullNewValue(): void
+    {
+        $entity = (new ModelWithAudit($this->db))->createEntity();
+
+        // Create an audit record for a datetime field with null newValue
+        $audit = (new Audit($this->db))->createEntity();
+        $audit->set('ident', 'datetime');
+
+        // Create audit data with a valid old DateTime value but null new value
+        $auditData = new \stdClass();
+        $auditData->oldValue = (new \DateTime('2023-01-01 12:00:00'))->format(DATE_ATOM);
+        $auditData->newValue = null;
+        $audit->setData($auditData);
+
+        // Test the renderDateTimeFieldAudit method
+        $result = $this->messageRenderer->renderDateTimeFieldAudit($audit, $entity, 'Y-m-d H:i');
+
+        // Verify that null newValue is cast to an empty string
+        $this->assertStringContainsString('changed "Datetime" from "2023-01-01 12:00" to ""', $result);
+    }
 }

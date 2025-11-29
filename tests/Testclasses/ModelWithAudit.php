@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace PhilippR\Atk4\Audit\Tests\Testclasses;
 
+use Atk4\Data\Field\PasswordField;
 use Atk4\Data\Model;
 use PhilippR\Atk4\Audit\AuditTrait;
 
@@ -45,6 +46,12 @@ class ModelWithAudit extends Model
                 'type' => 'string',
                 'caption' => 'ValuesTest',
                 'values' => ['first' => 'SomeValue', 'second' => 'SomeOtherValue']
+            ]
+        );
+        $this->addField(
+            'password',
+            [
+                PasswordField::class,
             ]
         );
 

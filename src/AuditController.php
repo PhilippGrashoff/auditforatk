@@ -14,12 +14,12 @@ class AuditController
 
     public string $messageRendererClass = MessageRenderer::class;
 
-    public string $skipFieldsControllerClass = SkipFieldsController::class;
+    public string $skipFieldsControllerClass = FieldAuditTypeController::class;
 
     public string $auditModelClass = Audit::class;
 
     protected MessageRenderer $messageRenderer;
-    protected SkipFieldsController $skipFieldsController;
+    protected FieldAuditTypeController $skipFieldsController;
 
     /**
      * @param array<string,mixed> $defaults
@@ -86,7 +86,7 @@ class AuditController
             if ($dirtyValue === $entity->get($fieldName)) {
                 continue;
             }
-            if ($this->skipFieldsController->skipFieldFromAudit($entity, $fieldName)) {
+            if ($this->skipFieldsController->getFieldAuditType($entity, $fieldName) === FieldAuditTypeController::TYPE_SKIP) {
                 continue;
             }
 
@@ -98,8 +98,13 @@ class AuditController
                     continue;
                 }
             }
-
-            $this->addFieldChangedAudit($entity, $fieldName, $dirtyValue);
+            if ($this->skipFieldsController->getFieldAuditType($entity, $fieldName) === FieldAuditTypeController::TYPE_NORMAL) {
+                $this->addFieldChangedAudit($entity, $fieldName, $dirtyValue);
+                continue;
+            }
+            if ($this->skipFieldsController->getFieldAuditType($entity, $fieldName) === FieldAuditTypeController::TYPE_NO_VALUE) {
+                $this->addFieldChangedAudit($entity, $fieldName, $dirtyValue, false);
+            }
         }
     }
 
@@ -107,27 +112,33 @@ class AuditController
      * @param Model $entity
      * @param string $fieldName
      * @param mixed $dirtyValue
+     * @param bool $withValues
      * @return void
      * @throws Exception
-     * @throws \Atk4\Data\Exception|\Throwable
+     * @throws \Atk4\Data\Exception
+     * @throws \Throwable
      */
-    protected function addFieldChangedAudit(Model $entity, string $fieldName, mixed $dirtyValue): void
+    protected function addFieldChangedAudit(Model $entity, string $fieldName, mixed $dirtyValue, bool $withValues = true): void
     {
         $audit = $this->getAuditForEntity($entity);
         $audit->set('type', Audit::TYPE_FIELD);
         $audit->set('ident', $fieldName);
         $data = new stdClass();
         $data->fieldType = $entity->getField($fieldName)->type;
-        $data->oldValue = $dirtyValue;
-        $data->newValue = $entity->get($fieldName);
-        if ($data->oldValue instanceof \DateTimeInterface) {
-            $data->oldValue = $data->oldValue->format(DATE_ATOM);
-        }
-        if ($data->newValue instanceof \DateTimeInterface) {
-            $data->newValue = $data->newValue->format(DATE_ATOM);
+        if ($withValues) {
+            $data->oldValue = $dirtyValue;
+            $data->newValue = $entity->get($fieldName);
+            if ($data->oldValue instanceof \DateTimeInterface) {
+                $data->oldValue = $data->oldValue->format(DATE_ATOM);
+            }
+            if ($data->newValue instanceof \DateTimeInterface) {
+                $data->newValue = $data->newValue->format(DATE_ATOM);
+            }
         }
         $audit->setData($data);
-        $audit->set('rendered_message', $this->messageRenderer->renderFieldAudit($audit, $entity));
+        $audit->set('rendered_message', $withValues ?
+            $this->messageRenderer->renderFieldAudit($audit, $entity) :
+            $this->messageRenderer->renderFieldAuditWithoutValues($audit, $entity));
         $audit->save();
     }
 

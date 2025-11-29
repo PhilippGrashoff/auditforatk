@@ -450,4 +450,64 @@ class AuditControllerTest extends TestCase
             (new Audit($this->db))->action('count')->getOne()
         );
     }
+
+    public function testSkippedFieldsAreNotAudited(): void
+    {
+        $entity = (new ModelWithAudit($this->db))->createEntity();
+
+        // Set skip fields to include 'string' field
+        $entity->setSkipFields(['string']);
+
+        // Change both a skipped field and a normal field
+        $entity->set('string', 'should be skipped');
+        $entity->set('text', 'should be audited');
+        $entity->save();
+
+        // Should have created audit (1) + text field audit (1) = 2
+        // The string field should be skipped due to TYPE_SKIP
+        self::assertEquals(
+            2,
+            (new Audit($this->db))->action('count')->getOne()
+        );
+
+        // Verify only text field was audited, not string field
+        $audits = $entity->ref(Audit::class);
+        $fieldAudit = $audits->addCondition('type', Audit::TYPE_FIELD)->loadAny();
+        self::assertSame('text', $fieldAudit->get('ident'));
+    }
+
+
+    public function testPasswordFieldAuditedWithoutValues(): void
+    {
+        $entity = (new ModelWithAudit($this->db))->createEntity();
+
+        // Change password field to trigger TYPE_NO_VALUE logic
+        $entity->getField('password')->setPassword($entity, 'newPassword');
+        $entity->save();
+
+        // Should have created audit (1) + password field audit without values (1) = 2
+        self::assertEquals(
+            2,
+            (new Audit($this->db))->action('count')->getOne()
+        );
+
+        // Verify password field audit was created but without values
+        $audits = $entity->ref(Audit::class);
+        $passwordAudit = $audits->addCondition('ident', 'password')->loadAny();
+
+        // Verify it's a field audit
+        self::assertSame(Audit::TYPE_FIELD, $passwordAudit->get('type'));
+        self::assertSame('password', $passwordAudit->get('ident'));
+
+        // Verify no audit data (values) were stored due to TYPE_NO_VALUE
+        $auditData = $passwordAudit->getData();
+        self::assertObjectNotHasProperty('oldValue', $auditData);
+        self::assertObjectNotHasProperty('newValue', $auditData);
+
+        // Verify the rendered message is the "without values" version
+        $renderedMessage = $passwordAudit->get('rendered_message');
+        self::assertStringContainsString('changed', $renderedMessage);
+        self::assertStringNotContainsString('from', $renderedMessage); // No "from" since no values
+        self::assertStringNotContainsString('to', $renderedMessage);   // No "to" since no values
+    }
 }
