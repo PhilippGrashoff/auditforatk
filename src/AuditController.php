@@ -124,6 +124,15 @@ class AuditController
         $audit = $this->getAuditForEntity($entity);
         $audit->set('type', Audit::TYPE_FIELD);
         $audit->set('ident', $fieldName);
+        $audit->setData($this->getDataForFieldChangedAudit($entity, $fieldName, $dirtyValue, $withValues));
+        $audit->set('rendered_message', $withValues ?
+            $this->messageRenderer->renderFieldAudit($audit, $entity) :
+            $this->messageRenderer->renderFieldAuditWithoutValues($audit, $entity));
+        $audit->save();
+    }
+
+    protected function getDataForFieldChangedAudit(Model $entity, string $fieldName, mixed $dirtyValue, bool $withValues): \stdClass
+    {
         $data = new stdClass();
         $data->fieldType = $entity->getField($fieldName)->type;
         if ($withValues) {
@@ -136,11 +145,7 @@ class AuditController
                 $data->newValue = $data->newValue->format(DATE_ATOM);
             }
         }
-        $audit->setData($data);
-        $audit->set('rendered_message', $withValues ?
-            $this->messageRenderer->renderFieldAudit($audit, $entity) :
-            $this->messageRenderer->renderFieldAuditWithoutValues($audit, $entity));
-        $audit->save();
+        return $data;
     }
 
     /**
