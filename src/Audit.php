@@ -48,7 +48,7 @@ class Audit extends SecondaryModel
         //the old and the new value of the field are stored,
         //TODO Currently, there is an very ugly hack used to save data as JSON in persistence. This should be properly
         //handled by a custom field type.
-        $this->addField('data');
+        $this->addField('data', ['type' => 'text']);
 
         //save the user ID for re-rendering
         $this->addField('user_id', ['type' => 'integer']);
